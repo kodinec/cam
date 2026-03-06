@@ -1,13 +1,13 @@
- services:
+services:
   cam1:
-     image: peanutsguy/mjpg-streamer:latest
+    image: peanutsguy/mjpg-streamer:latest
     restart: unless-stopped
     devices:
-      - /dev/video0:/dev/video0
+      - ${CAM1_DEVICE:-/dev/video0}:${CAM1_DEVICE:-/dev/video0}
     command:
       - mjpg_streamer
       - -i
-      - input_uvc.so -d /dev/video0 -r ${CAM1_RES:-1920x1080} -f ${CAM1_FPS:-25} -y
+      - input_uvc.so -d ${CAM1_DEVICE:-/dev/video0} -r ${CAM1_RES:-1920x1080} -f ${CAM1_FPS:-25} -y
       - -o
       - output_http.so -p 8080 -w /usr/local/share/mjpg-streamer/www
 
