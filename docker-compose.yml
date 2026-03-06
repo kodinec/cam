@@ -62,11 +62,11 @@ services:
       - -f
       - v4l2
       - -input_format
-      - ${CAM2_INPUT_FORMAT:-mjpeg}
+      - ${CAM2_INPUT_FORMAT:-h264}
       - -framerate
       - ${CAM2_FPS:-30}
       - -video_size
-      - ${CAM2_RES:-1024x768}
+      - ${CAM2_RES:-1920x1080}
       - -analyzeduration
       - ${CAM2_ANALYZE_DURATION:-100M}
       - -probesize
