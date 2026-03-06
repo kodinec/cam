@@ -1,6 +1,6 @@
-services:
+ services:
   cam1:
-    image: peanutsguy/mjpg-streamer:latest
+     image: peanutsguy/mjpg-streamer:latest
     restart: unless-stopped
     devices:
       - /dev/video0:/dev/video0
@@ -12,7 +12,7 @@ services:
       - output_http.so -p 8080 -w /usr/local/share/mjpg-streamer/www
 
   cam2:
-    image: ghcr.io/jacksonliam/mjpg-streamer:latest
+    image: peanutsguy/mjpg-streamer:latest
     restart: unless-stopped
     devices:
       - ${CAM2_DEVICE:-/dev/video2}:${CAM2_DEVICE:-/dev/video2}
