@@ -1,0 +1,53 @@
+services:
+  cam1:
+    image: ghcr.io/jacksonliam/mjpg-streamer:latest
+    restart: unless-stopped
+    devices:
+      - /dev/video0:/dev/video0
+    command:
+      - mjpg_streamer
+      - -i
+      - input_uvc.so -d /dev/video0 -r ${CAM1_RES:-1920x1080} -f ${CAM1_FPS:-25} -y
+      - -o
+      - output_http.so -p 8080 -w /usr/local/share/mjpg-streamer/www
+
+  cam2:
+    image: ghcr.io/jacksonliam/mjpg-streamer:latest
+    restart: unless-stopped
+    devices:
+      - ${CAM2_DEVICE:-/dev/video2}:${CAM2_DEVICE:-/dev/video2}
+    command:
+      - mjpg_streamer
+      - -i
+      - input_uvc.so -d ${CAM2_DEVICE:-/dev/video2} -r ${CAM2_RES:-1024x768} -f ${CAM2_FPS:-30} -y
+      - -o
+      - output_http.so -p 8080 -w /usr/local/share/mjpg-streamer/www
+
+  ptz-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - cam1
+      - cam2
+    devices:
+      - ${PTZ_SERIAL:-/dev/ttyACM0}:${PTZ_SERIAL:-/dev/ttyACM0}
+      - ${CAM2_DEVICE:-/dev/video2}:${CAM2_DEVICE:-/dev/video2}
+    environment:
+      LISTEN: ":8787"
+      PTZ_USER: ${PTZ_USER:-admin}
+      PTZ_PASS: ${PTZ_PASS:-admin}
+      PTZ_SERIAL: ${PTZ_SERIAL:-/dev/ttyACM0}
+      PTZ_BAUD: ${PTZ_BAUD:-115200}
+      PTZ_ZOOM_MAX: ${PTZ_ZOOM_MAX:-25}
+      PTZ_X_PER_STEP: ${PTZ_X_PER_STEP:-10.0}
+      PTZ_Y_PER_STEP: ${PTZ_Y_PER_STEP:-10.0}
+      PTZ_FEED: ${PTZ_FEED:-200}
+      PTZ_ALLOW_RAW: ${PTZ_ALLOW_RAW:-false}
+      CAM1_UPSTREAM: http://cam1:8080/?action=stream
+      CAM2_UPSTREAM: http://cam2:8080/?action=stream
+      CAM2_DEVICE: ${CAM2_DEVICE:-/dev/video2}
+      CAM2_ZOOM_STEP: ${CAM2_ZOOM_STEP:-1}
+    ports:
+      - "8787:8787"
