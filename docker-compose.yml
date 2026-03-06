@@ -1,6 +1,7 @@
 services:
   cam1:
-    image: peanutsguy/mjpg-streamer:latest
+    image: ${MJPG_STREAMER_IMAGE:-ghcr.io/jacksonliam/mjpg-streamer:latest}
+    platform: ${MJPG_STREAMER_PLATFORM:-linux/amd64}
     restart: unless-stopped
     devices:
       - ${CAM1_DEVICE:-/dev/video0}:${CAM1_DEVICE:-/dev/video0}
@@ -12,7 +13,8 @@ services:
       - output_http.so -p 8080 -w /usr/local/share/mjpg-streamer/www
 
   cam2:
-    image: peanutsguy/mjpg-streamer:latest
+    image: ${MJPG_STREAMER_IMAGE:-ghcr.io/jacksonliam/mjpg-streamer:latest}
+    platform: ${MJPG_STREAMER_PLATFORM:-linux/amd64}
     restart: unless-stopped
     devices:
       - ${CAM2_DEVICE:-/dev/video2}:${CAM2_DEVICE:-/dev/video2}
