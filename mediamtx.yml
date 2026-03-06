@@ -1,0 +1,15 @@
+logLevel: info
+
+rtspAddress: :8554
+hlsAddress: :8888
+
+hls: yes
+hlsVariant: lowLatency
+hlsAlwaysRemux: yes
+hlsAllowOrigin: "*"
+
+paths:
+  cam1:
+    source: publisher
+  cam2:
+    source: publisher

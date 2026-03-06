@@ -228,10 +228,10 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam1" class="panel">
       <div class="panel-head">
         <h2>Camera 1: %s</h2>
-        <span class="small">%s</span>
+        <span class="small">HLS: /cam1/hls/index.m3u8</span>
       </div>
       <div class="stream-wrap">
-        <img class="stream" src="/cam1/mjpeg" alt="cam1 stream" />
+        <video id="cam1Video" class="stream" muted autoplay playsinline controls></video>
       </div>
       <div class="controls">
         <button onclick="cam1ZoomDelta(-1)">Zoom -</button>
@@ -253,10 +253,10 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam2" class="panel">
       <div class="panel-head">
         <h2>Camera 2: %s</h2>
-        <span class="small">%s (stream: %s)</span>
+        <span class="small">HLS: /cam2/hls/index.m3u8 (stream: %s)</span>
       </div>
       <div class="stream-wrap">
-        <img class="stream" src="/cam2/mjpeg" alt="cam2 stream" />
+        <video id="cam2Video" class="stream" muted autoplay playsinline controls></video>
       </div>
       <div class="controls">
         <button id="cam2ZoomMinus" onclick="cam2ZoomDelta(-1)">Zoom -</button>
@@ -278,7 +278,35 @@ func uiHTML(cfg Config) string {
   </section>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 <script>
+function attachHLS(videoId, url) {
+  const video = document.getElementById(videoId);
+  if (!video) return;
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = url;
+    video.play().catch(() => {});
+    return;
+  }
+  if (window.Hls && window.Hls.isSupported()) {
+    const hls = new window.Hls({
+      enableWorker: true,
+      lowLatencyMode: true,
+      liveSyncDurationCount: 3
+    });
+    hls.loadSource(url);
+    hls.attachMedia(video);
+    hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+      video.play().catch(() => {});
+    });
+    return;
+  }
+  const log = document.getElementById('log');
+  if (log) {
+    log.textContent = JSON.stringify({ error: 'HLS unsupported in this browser', url }, null, 2);
+  }
+}
+
 function setActiveMode(mode) {
   for (const id of ['mode-both', 'mode-cam1', 'mode-cam2']) {
     const el = document.getElementById(id);
@@ -359,17 +387,17 @@ async function cam2Status() {
 }
 
 setView('both');
+attachHLS('cam1Video', '/cam1/hls/index.m3u8');
+attachHLS('cam2Video', '/cam2/hls/index.m3u8');
 cam1Status();
 cam2Status();
 </script>
 </body>
 </html>`,
 		esc(cfg.Cam1Name),
-		esc(cfg.Cam1Upstream),
 		max,
 		max,
 		esc(cfg.Cam2Name),
-		esc(cfg.Cam2Upstream),
 		esc(cfg.Cam2Device),
 		esc(cfg.Cam2CtrlDev),
 	)

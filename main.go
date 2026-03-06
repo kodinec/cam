@@ -10,8 +10,8 @@ import (
 
 func main() {
 	cfg := loadConfig()
-	log.Printf("startup listen=%s cam1_upstream=%s cam2_upstream=%s cam2_device=%s cam2_control_device=%s cam2_zoom_step=%d ptz_serial=%s ptz_baud=%d zoom_max=%d x_per_step=%.3f y_per_step=%.3f feed=%.1f raw=%v",
-		cfg.Listen, cfg.Cam1Upstream, cfg.Cam2Upstream, cfg.Cam2Device, cfg.Cam2CtrlDev, cfg.Cam2ZoomStep, cfg.PTZSerial, cfg.PTZBaud, cfg.PTZZoomMax, cfg.PTZXPerStep, cfg.PTZYPerStep, cfg.PTZFeed, cfg.PTZAllowRaw,
+	log.Printf("startup listen=%s cam1_hls_base=%s cam2_hls_base=%s cam2_device=%s cam2_control_device=%s cam2_zoom_step=%d ptz_serial=%s ptz_baud=%d zoom_max=%d x_per_step=%.3f y_per_step=%.3f feed=%.1f raw=%v",
+		cfg.Listen, cfg.Cam1HLSBase, cfg.Cam2HLSBase, cfg.Cam2Device, cfg.Cam2CtrlDev, cfg.Cam2ZoomStep, cfg.PTZSerial, cfg.PTZBaud, cfg.PTZZoomMax, cfg.PTZXPerStep, cfg.PTZYPerStep, cfg.PTZFeed, cfg.PTZAllowRaw,
 	)
 
 	ptz, err := newPTZ(cfg)
@@ -42,6 +42,8 @@ func main() {
 	private.HandleFunc("/api/cam2/zoom/status", handleCam2ZoomStatus(cam2Zoom))
 	private.HandleFunc("/cam1/mjpeg", makeMJPEGProxy(proxyClient, cfg.Cam1Upstream, "cam1"))
 	private.HandleFunc("/cam2/mjpeg", makeMJPEGProxy(proxyClient, cfg.Cam2Upstream, "cam2"))
+	private.HandleFunc("/cam1/hls/", makePrefixReverseProxy(cfg.Cam1HLSBase, "/cam1/hls/", "cam1-hls"))
+	private.HandleFunc("/cam2/hls/", makePrefixReverseProxy(cfg.Cam2HLSBase, "/cam2/hls/", "cam2-hls"))
 
 	handler := basicAuth(cfg.User, cfg.Pass, private)
 

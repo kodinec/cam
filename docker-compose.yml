@@ -1,29 +1,87 @@
 services:
-  cam1:
-    build:
-      context: .
-      dockerfile: Dockerfile.mjpg
+  mediamtx:
+    image: bluenviron/mediamtx:latest
     restart: unless-stopped
+    command:
+      - /mediamtx
+      - /mediamtx.yml
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    ports:
+      - "8554:8554"
+      - "8888:8888"
+
+  cam1-publisher:
+    image: jrottenberg/ffmpeg:6.1-ubuntu
+    restart: unless-stopped
+    depends_on:
+      - mediamtx
     devices:
       - ${CAM1_DEVICE:-/dev/video0}:${CAM1_DEVICE:-/dev/video0}
-    environment:
-      CAM_DEVICE: ${CAM1_DEVICE:-/dev/video0}
-      CAM_RES: ${CAM1_RES:-1920x1080}
-      CAM_FPS: ${CAM1_FPS:-25}
-      CAM_PORT: "8080"
+    command:
+      - -hide_banner
+      - -loglevel
+      - warning
+      - -f
+      - v4l2
+      - -framerate
+      - ${CAM1_FPS:-25}
+      - -video_size
+      - ${CAM1_RES:-1920x1080}
+      - -i
+      - ${CAM1_DEVICE:-/dev/video0}
+      - -an
+      - -c:v
+      - libx264
+      - -preset
+      - ultrafast
+      - -tune
+      - zerolatency
+      - -pix_fmt
+      - yuv420p
+      - -g
+      - ${CAM1_GOP:-30}
+      - -f
+      - rtsp
+      - -rtsp_transport
+      - tcp
+      - rtsp://mediamtx:8554/cam1
 
-  cam2:
-    build:
-      context: .
-      dockerfile: Dockerfile.mjpg
+  cam2-publisher:
+    image: jrottenberg/ffmpeg:6.1-ubuntu
     restart: unless-stopped
+    depends_on:
+      - mediamtx
     devices:
       - ${CAM2_DEVICE:-/dev/video2}:${CAM2_DEVICE:-/dev/video2}
-    environment:
-      CAM_DEVICE: ${CAM2_DEVICE:-/dev/video2}
-      CAM_RES: ${CAM2_RES:-1024x768}
-      CAM_FPS: ${CAM2_FPS:-30}
-      CAM_PORT: "8080"
+    command:
+      - -hide_banner
+      - -loglevel
+      - warning
+      - -f
+      - v4l2
+      - -framerate
+      - ${CAM2_FPS:-30}
+      - -video_size
+      - ${CAM2_RES:-1024x768}
+      - -i
+      - ${CAM2_DEVICE:-/dev/video2}
+      - -an
+      - -c:v
+      - libx264
+      - -preset
+      - ultrafast
+      - -tune
+      - zerolatency
+      - -pix_fmt
+      - yuv420p
+      - -g
+      - ${CAM2_GOP:-30}
+      - -f
+      - rtsp
+      - -rtsp_transport
+      - tcp
+      - rtsp://mediamtx:8554/cam2
 
   ptz-service:
     build:
@@ -31,8 +89,9 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
-      - cam1
-      - cam2
+      - mediamtx
+      - cam1-publisher
+      - cam2-publisher
     devices:
       - ${PTZ_SERIAL:-/dev/ttyACM0}:${PTZ_SERIAL:-/dev/ttyACM0}
       - ${CAM2_CONTROL_DEVICE:-/dev/video2}:${CAM2_CONTROL_DEVICE:-/dev/video2}
@@ -47,8 +106,10 @@ services:
       PTZ_Y_PER_STEP: ${PTZ_Y_PER_STEP:-10.0}
       PTZ_FEED: ${PTZ_FEED:-200}
       PTZ_ALLOW_RAW: ${PTZ_ALLOW_RAW:-false}
-      CAM1_UPSTREAM: http://cam1:8080/?action=stream
-      CAM2_UPSTREAM: http://cam2:8080/?action=stream
+      CAM1_HLS_BASE: http://mediamtx:8888/cam1/
+      CAM2_HLS_BASE: http://mediamtx:8888/cam2/
+      CAM1_UPSTREAM: http://mediamtx:8888/cam1/index.m3u8
+      CAM2_UPSTREAM: http://mediamtx:8888/cam2/index.m3u8
       CAM2_DEVICE: ${CAM2_DEVICE:-/dev/video2}
       CAM2_CONTROL_DEVICE: ${CAM2_CONTROL_DEVICE:-/dev/video2}
       CAM2_ZOOM_STEP: ${CAM2_ZOOM_STEP:-1}

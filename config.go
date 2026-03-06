@@ -15,6 +15,8 @@ type Config struct {
 	Cam2Name     string
 	Cam1Upstream string
 	Cam2Upstream string
+	Cam1HLSBase  string
+	Cam2HLSBase  string
 	Cam2Device   string
 	Cam2CtrlDev  string
 	Cam2ZoomStep int
@@ -37,6 +39,8 @@ func loadConfig() Config {
 	flag.StringVar(&cfg.Cam2Name, "cam2-name", envString("CAM2_NAME", "NVECTECH PATRIOT 2 H50"), "camera #2 label")
 	flag.StringVar(&cfg.Cam1Upstream, "cam1-upstream", envString("CAM1_UPSTREAM", "http://127.0.0.1:8080/?action=stream"), "camera #1 MJPEG upstream")
 	flag.StringVar(&cfg.Cam2Upstream, "cam2-upstream", envString("CAM2_UPSTREAM", "http://127.0.0.1:8081/?action=stream"), "camera #2 MJPEG upstream")
+	flag.StringVar(&cfg.Cam1HLSBase, "cam1-hls-base", envString("CAM1_HLS_BASE", "http://mediamtx:8888/cam1/"), "camera #1 HLS base URL for reverse proxy")
+	flag.StringVar(&cfg.Cam2HLSBase, "cam2-hls-base", envString("CAM2_HLS_BASE", "http://mediamtx:8888/cam2/"), "camera #2 HLS base URL for reverse proxy")
 	flag.StringVar(&cfg.Cam2Device, "cam2-device", envString("CAM2_DEVICE", "/dev/video2"), "camera #2 stream device")
 	flag.StringVar(&cfg.Cam2CtrlDev, "cam2-control-device", envString("CAM2_CONTROL_DEVICE", envString("CAM2_DEVICE", "/dev/video2")), "camera #2 control device for v4l2 zoom")
 	flag.IntVar(&cfg.Cam2ZoomStep, "cam2-zoom-step", envInt("CAM2_ZOOM_STEP", 1), "camera #2 zoom step for zoom_absolute control")
