@@ -1,6 +1,6 @@
 services:
   cam1:
-    image: ghcr.io/jacksonliam/mjpg-streamer:latest
+    image: peanutsguy/mjpg-streamer:latest
     restart: unless-stopped
     devices:
       - /dev/video0:/dev/video0
