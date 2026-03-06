@@ -1,29 +1,29 @@
 services:
   cam1:
-    image: ${MJPG_STREAMER_IMAGE:-ghcr.io/jacksonliam/mjpg-streamer:latest}
-    platform: ${MJPG_STREAMER_PLATFORM:-linux/amd64}
+    build:
+      context: .
+      dockerfile: Dockerfile.mjpg
     restart: unless-stopped
     devices:
       - ${CAM1_DEVICE:-/dev/video0}:${CAM1_DEVICE:-/dev/video0}
-    command:
-      - mjpg_streamer
-      - -i
-      - input_uvc.so -d ${CAM1_DEVICE:-/dev/video0} -r ${CAM1_RES:-1920x1080} -f ${CAM1_FPS:-25} -y
-      - -o
-      - output_http.so -p 8080 -w /usr/local/share/mjpg-streamer/www
+    environment:
+      CAM_DEVICE: ${CAM1_DEVICE:-/dev/video0}
+      CAM_RES: ${CAM1_RES:-1920x1080}
+      CAM_FPS: ${CAM1_FPS:-25}
+      CAM_PORT: "8080"
 
   cam2:
-    image: ${MJPG_STREAMER_IMAGE:-ghcr.io/jacksonliam/mjpg-streamer:latest}
-    platform: ${MJPG_STREAMER_PLATFORM:-linux/amd64}
+    build:
+      context: .
+      dockerfile: Dockerfile.mjpg
     restart: unless-stopped
     devices:
       - ${CAM2_DEVICE:-/dev/video2}:${CAM2_DEVICE:-/dev/video2}
-    command:
-      - mjpg_streamer
-      - -i
-      - input_uvc.so -d ${CAM2_DEVICE:-/dev/video2} -r ${CAM2_RES:-1024x768} -f ${CAM2_FPS:-30} -y
-      - -o
-      - output_http.so -p 8080 -w /usr/local/share/mjpg-streamer/www
+    environment:
+      CAM_DEVICE: ${CAM2_DEVICE:-/dev/video2}
+      CAM_RES: ${CAM2_RES:-1024x768}
+      CAM_FPS: ${CAM2_FPS:-30}
+      CAM_PORT: "8080"
 
   ptz-service:
     build:
