@@ -259,15 +259,15 @@ func uiHTML(cfg Config) string {
         <img class="stream" src="/cam2/mjpeg" alt="cam2 stream" />
       </div>
       <div class="controls">
-        <button onclick="cam2ZoomDelta(-1)">Zoom -</button>
-        <button class="accent" onclick="cam2ZoomDelta(1)">Zoom +</button>
+        <button id="cam2ZoomMinus" onclick="cam2ZoomDelta(-1)">Zoom -</button>
+        <button id="cam2ZoomPlus" class="accent" onclick="cam2ZoomDelta(1)">Zoom +</button>
         <label>Set</label>
         <input id="cam2ZoomSet" type="number" value="0" />
-        <button class="blue" onclick="cam2ZoomSet()">Apply</button>
+        <button id="cam2ZoomApply" class="blue" onclick="cam2ZoomSet()">Apply</button>
         <button onclick="cam2Status()">Status</button>
       </div>
       <div class="controls">
-        <span class="small">Linux control via v4l2-ctl (%s)</span>
+        <span id="cam2ZoomInfo" class="small">Linux control via v4l2-ctl (%s)</span>
       </div>
     </section>
   </main>
@@ -337,7 +337,26 @@ function cam2ZoomSet() {
   const set = Number(document.getElementById('cam2ZoomSet').value);
   return api('/api/cam2/zoom', 'POST', { set });
 }
-function cam2Status() { return api('/api/cam2/zoom/status', 'GET'); }
+function setCam2ZoomEnabled(enabled, note) {
+  for (const id of ['cam2ZoomMinus', 'cam2ZoomPlus', 'cam2ZoomSet', 'cam2ZoomApply']) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !enabled;
+  }
+  const info = document.getElementById('cam2ZoomInfo');
+  if (info && note) info.textContent = note;
+}
+async function cam2Status() {
+  const data = await api('/api/cam2/zoom/status', 'GET');
+  if (data && data.available) {
+    const mode = data.mode ? (' mode=' + data.mode) : '';
+    const ctrl = data.control ? (' control=' + data.control) : '';
+    setCam2ZoomEnabled(true, 'Linux control via v4l2-ctl' + ctrl + mode);
+  } else {
+    const err = (data && data.error) ? data.error : 'zoom control is not available in V4L2';
+    setCam2ZoomEnabled(false, 'Camera 2 zoom disabled: ' + err);
+  }
+  return data;
+}
 
 setView('both');
 cam1Status();
