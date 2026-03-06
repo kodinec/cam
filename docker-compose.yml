@@ -12,11 +12,14 @@ services:
     depends_on:
       - mediamtx
     devices:
-      - ${CAM1_DEVICE:-/dev/video0}:${CAM1_DEVICE:-/dev/video0}
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
     command:
       - -hide_banner
       - -loglevel
       - warning
+      - -thread_queue_size
+      - ${CAM1_THREAD_QUEUE:-1024}
       - -f
       - v4l2
       - -framerate
@@ -48,17 +51,26 @@ services:
     depends_on:
       - mediamtx
     devices:
-      - ${CAM2_DEVICE:-/dev/video2}:${CAM2_DEVICE:-/dev/video2}
+      - /dev/video2:/dev/video2
+      - /dev/video3:/dev/video3
     command:
       - -hide_banner
       - -loglevel
       - warning
+      - -thread_queue_size
+      - ${CAM2_THREAD_QUEUE:-1024}
       - -f
       - v4l2
+      - -input_format
+      - ${CAM2_INPUT_FORMAT:-mjpeg}
       - -framerate
       - ${CAM2_FPS:-30}
       - -video_size
       - ${CAM2_RES:-1024x768}
+      - -analyzeduration
+      - ${CAM2_ANALYZE_DURATION:-100M}
+      - -probesize
+      - ${CAM2_PROBE_SIZE:-100M}
       - -i
       - ${CAM2_DEVICE:-/dev/video2}
       - -an
@@ -89,7 +101,8 @@ services:
       - cam2-publisher
     devices:
       - ${PTZ_SERIAL:-/dev/ttyACM0}:${PTZ_SERIAL:-/dev/ttyACM0}
-      - ${CAM2_CONTROL_DEVICE:-/dev/video2}:${CAM2_CONTROL_DEVICE:-/dev/video2}
+      - /dev/video2:/dev/video2
+      - /dev/video3:/dev/video3
     environment:
       LISTEN: ":8787"
       PTZ_USER: ${PTZ_USER:-admin}
