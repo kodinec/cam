@@ -29,7 +29,9 @@ ENV LISTEN=:8787 \
     PTZ_ALLOW_RAW=false \
     CAM1_UPSTREAM=http://cam1:8080/?action=stream \
     CAM2_UPSTREAM=http://cam2:8080/?action=stream \
-    CAM2_DEVICE=/dev/video2
+    CAM2_DEVICE=/dev/video2 \
+    CAM2_CONTROL_DEVICE=/dev/video2 \
+    CAM2_ZOOM_STEP=1
 
 EXPOSE 8787
 ENTRYPOINT ["ptz-service"]

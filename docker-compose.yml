@@ -33,7 +33,7 @@ services:
       - cam2
     devices:
       - ${PTZ_SERIAL:-/dev/ttyACM0}:${PTZ_SERIAL:-/dev/ttyACM0}
-      - ${CAM2_DEVICE:-/dev/video2}:${CAM2_DEVICE:-/dev/video2}
+      - ${CAM2_CONTROL_DEVICE:-/dev/video2}:${CAM2_CONTROL_DEVICE:-/dev/video2}
     environment:
       LISTEN: ":8787"
       PTZ_USER: ${PTZ_USER:-admin}
@@ -48,6 +48,7 @@ services:
       CAM1_UPSTREAM: http://cam1:8080/?action=stream
       CAM2_UPSTREAM: http://cam2:8080/?action=stream
       CAM2_DEVICE: ${CAM2_DEVICE:-/dev/video2}
+      CAM2_CONTROL_DEVICE: ${CAM2_CONTROL_DEVICE:-/dev/video2}
       CAM2_ZOOM_STEP: ${CAM2_ZOOM_STEP:-1}
     ports:
       - "8787:8787"

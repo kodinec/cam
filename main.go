@@ -10,8 +10,8 @@ import (
 
 func main() {
 	cfg := loadConfig()
-	log.Printf("startup listen=%s cam1_upstream=%s cam2_upstream=%s cam2_device=%s cam2_zoom_step=%d ptz_serial=%s ptz_baud=%d zoom_max=%d x_per_step=%.3f y_per_step=%.3f feed=%.1f raw=%v",
-		cfg.Listen, cfg.Cam1Upstream, cfg.Cam2Upstream, cfg.Cam2Device, cfg.Cam2ZoomStep, cfg.PTZSerial, cfg.PTZBaud, cfg.PTZZoomMax, cfg.PTZXPerStep, cfg.PTZYPerStep, cfg.PTZFeed, cfg.PTZAllowRaw,
+	log.Printf("startup listen=%s cam1_upstream=%s cam2_upstream=%s cam2_device=%s cam2_control_device=%s cam2_zoom_step=%d ptz_serial=%s ptz_baud=%d zoom_max=%d x_per_step=%.3f y_per_step=%.3f feed=%.1f raw=%v",
+		cfg.Listen, cfg.Cam1Upstream, cfg.Cam2Upstream, cfg.Cam2Device, cfg.Cam2CtrlDev, cfg.Cam2ZoomStep, cfg.PTZSerial, cfg.PTZBaud, cfg.PTZZoomMax, cfg.PTZXPerStep, cfg.PTZYPerStep, cfg.PTZFeed, cfg.PTZAllowRaw,
 	)
 
 	ptz, err := newPTZ(cfg)

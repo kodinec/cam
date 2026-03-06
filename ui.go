@@ -253,7 +253,7 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam2" class="panel">
       <div class="panel-head">
         <h2>Camera 2: %s</h2>
-        <span class="small">%s (%s)</span>
+        <span class="small">%s (stream: %s)</span>
       </div>
       <div class="stream-wrap">
         <img class="stream" src="/cam2/mjpeg" alt="cam2 stream" />
@@ -352,6 +352,6 @@ cam2Status();
 		esc(cfg.Cam2Name),
 		esc(cfg.Cam2Upstream),
 		esc(cfg.Cam2Device),
-		esc(cfg.Cam2Device),
+		esc(cfg.Cam2CtrlDev),
 	)
 }

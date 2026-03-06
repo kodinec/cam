@@ -51,7 +51,7 @@ func newCam2Zoom(cfg Config) *Cam2Zoom {
 		step = 1
 	}
 	c := &Cam2Zoom{
-		device: cfg.Cam2Device,
+		device: cfg.Cam2CtrlDev,
 		step:   step,
 	}
 	_ = c.probeLocked()
