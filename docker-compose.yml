@@ -2,11 +2,6 @@ services:
   mediamtx:
     image: bluenviron/mediamtx:latest
     restart: unless-stopped
-    command:
-      - /mediamtx
-      - /mediamtx.yml
-    volumes:
-      - ./mediamtx.yml:/mediamtx.yml:ro
     ports:
       - "8554:8554"
       - "8888:8888"
