@@ -7,10 +7,10 @@ services:
       MTX_WEBRTCADDITIONALHOSTS: ${WEBRTC_ADDITIONAL_HOSTS:-10.10.45.39}
       MTX_WEBRTCLOCALTCPADDRESS: :8189
     ports:
-      - "8554:8554"
-      - "8889:8889"
-      - "8189:8189/udp"
-      - "8189:8189/tcp"
+      - "${MTX_RTSP_PORT:-8554}:8554"
+      - "${MTX_WEBRTC_HTTP_PORT:-8889}:8889"
+      - "${MTX_WEBRTC_ICE_PORT:-8189}:8189/udp"
+      - "${MTX_WEBRTC_ICE_PORT:-8189}:8189/tcp"
 
   cam1-publisher:
     image: jrottenberg/ffmpeg:6.1-ubuntu
@@ -73,8 +73,8 @@ services:
       WEB_LISTEN: :8787
       CAM1_DEVICE: ${CAM1_DEVICE:-/dev/v4l/by-id/usb-Kurokesu_C3_4K_00001-video-index0}
       CAM2_DEVICE: ${CAM2_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}
-      WEBRTC_PORT: ${WEBRTC_PORT:-8889}
+      WEBRTC_PORT: ${MTX_WEBRTC_HTTP_PORT:-8889}
     volumes:
       - /dev:/dev:ro
     ports:
-      - "8787:8787"
+      - "${WEB_PORT:-8787}:8787"

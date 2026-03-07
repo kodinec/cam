@@ -75,7 +75,7 @@ services:
       - cam2-publisher
     volumes:
       - /dev:/dev
-      - ${CAM1_MAP_FILE:-./zoom8_focusmap.json}:/app/zoom8_focusmap.json:ro
+      - ${CAM1_MAP_FILE:-./zoom25_focusmap.json}:/app/cam1_focusmap.json:ro
     environment:
       LISTEN: ":8787"
       PTZ_USER: ${PTZ_USER:-admin}
@@ -87,7 +87,7 @@ services:
       PTZ_Y_PER_STEP: ${PTZ_Y_PER_STEP:-10.0}
       PTZ_FEED: ${PTZ_FEED:-200}
       PTZ_ALLOW_RAW: ${PTZ_ALLOW_RAW:-false}
-      CAM1_MAP_PATH: /app/zoom8_focusmap.json
+      CAM1_MAP_PATH: /app/cam1_focusmap.json
       CAM1_MAP_STEPS: "8"
       CAM1_MAP_FEED: "180"
       CAM1_RESET: ${CAM1_RESET:-true}

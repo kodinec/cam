@@ -20,6 +20,19 @@ Direct WebRTC pages:
 - `http://10.10.45.39:8889/cam1/`
 - `http://10.10.45.39:8889/cam2/`
 
+If ports are already busy (old stack is still running), start with overrides:
+
+```bash
+MTX_RTSP_PORT=18554 \
+MTX_WEBRTC_HTTP_PORT=18889 \
+MTX_WEBRTC_ICE_PORT=18189 \
+WEB_PORT=18787 \
+docker compose up -d --build
+```
+
+Then open:
+- `http://10.10.45.39:18787`
+
 ## Quick checks
 
 ```bash
