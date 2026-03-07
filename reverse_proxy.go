@@ -21,8 +21,10 @@ func makePrefixReverseProxy(baseURL, prefix, label string) http.HandlerFunc {
 	proxy := httputil.NewSingleHostReverseProxy(u)
 	orig := proxy.Director
 	proxy.Director = func(req *http.Request) {
+		// Keep the original inbound path before the default director mutates it.
+		inPath := req.URL.Path
 		orig(req)
-		suffix := strings.TrimPrefix(req.URL.Path, prefix)
+		suffix := strings.TrimPrefix(inPath, prefix)
 		if !strings.HasPrefix(suffix, "/") {
 			suffix = "/" + suffix
 		}

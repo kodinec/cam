@@ -192,6 +192,12 @@ func uiHTML(cfg Config) string {
       font-size: 13px;
       color: var(--muted);
     }
+    .small a {
+      color: var(--accent-2);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--accent-2);
+    }
+    .small a:hover { opacity: 0.85; }
     pre {
       margin: 0;
       padding: 12px 14px;
@@ -228,7 +234,7 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam1" class="panel">
       <div class="panel-head">
         <h2>Camera 1: %s</h2>
-        <span class="small">HLS: /cam1/hls/index.m3u8</span>
+        <span class="small">HLS: <a id="cam1HlsLink" href="/cam1/hls/index.m3u8" target="_blank" rel="noopener">/cam1/hls/index.m3u8</a></span>
       </div>
       <div class="stream-wrap">
         <video id="cam1Video" class="stream" muted autoplay playsinline controls></video>
@@ -253,7 +259,7 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam2" class="panel">
       <div class="panel-head">
         <h2>Camera 2: %s</h2>
-        <span class="small">HLS: /cam2/hls/index.m3u8 (stream: %s)</span>
+        <span class="small">HLS: <a id="cam2HlsLink" href="/cam2/hls/index.m3u8" target="_blank" rel="noopener">/cam2/hls/index.m3u8</a> (stream: %s)</span>
       </div>
       <div class="stream-wrap">
         <video id="cam2Video" class="stream" muted autoplay playsinline controls></video>
@@ -335,6 +341,31 @@ function setView(mode) {
   setActiveMode(mode);
 }
 
+function absoluteURL(path) {
+  return new URL(path, window.location.origin).toString();
+}
+
+function bindStreamLinks() {
+  const cam1Path = '/cam1/hls/index.m3u8';
+  const cam2Path = '/cam2/hls/index.m3u8';
+  const cam1URL = absoluteURL(cam1Path);
+  const cam2URL = absoluteURL(cam2Path);
+
+  const cam1Link = document.getElementById('cam1HlsLink');
+  if (cam1Link) {
+    cam1Link.href = cam1URL;
+    cam1Link.textContent = cam1URL;
+  }
+  const cam2Link = document.getElementById('cam2HlsLink');
+  if (cam2Link) {
+    cam2Link.href = cam2URL;
+    cam2Link.textContent = cam2URL;
+  }
+
+  attachHLS('cam1Video', cam1URL);
+  attachHLS('cam2Video', cam2URL);
+}
+
 async function api(url, method, body) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (body !== undefined) opts.body = JSON.stringify(body);
@@ -387,8 +418,7 @@ async function cam2Status() {
 }
 
 setView('both');
-attachHLS('cam1Video', '/cam1/hls/index.m3u8');
-attachHLS('cam2Video', '/cam2/hls/index.m3u8');
+bindStreamLinks();
 cam1Status();
 cam2Status();
 </script>
