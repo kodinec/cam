@@ -479,7 +479,8 @@ func (p *PTZ) runStartFlow() (map[string]any, error) {
 	}
 	statusLines, err := p.queryStatus()
 	if err != nil {
-		return nil, err
+		log.Printf("warning: final status after home unavailable: %v", err)
+		statusLines = nil
 	}
 
 	p.mu.Lock()
@@ -677,7 +678,8 @@ func parseLimitAxes(line string) map[string]bool {
 func (p *PTZ) autoReleaseLimits(stepX, stepY float64, maxSteps int, feed float64) error {
 	statusLines, err := p.queryStatus()
 	if err != nil {
-		return err
+		log.Printf("warning: auto-release skipped: initial status unavailable: %v", err)
+		return nil
 	}
 	lim := parseLimitAxes(statusLine(statusLines))
 	if len(lim) == 0 {
