@@ -6,10 +6,13 @@ MODE="${CAM1_MODE:-mjpeg}"
 FPS="${CAM1_FPS:-25}"
 RES="${CAM1_RES:-1920x1080}"
 THREAD_QUEUE="${CAM1_THREAD_QUEUE:-64}"
+ENCODER="${CAM1_ENCODER:-libx264}"
 PRESET="${CAM1_X264_PRESET:-superfast}"
 TUNE="${CAM1_X264_TUNE:-zerolatency}"
 PROFILE="${CAM1_X264_PROFILE:-high}"
 CRF="${CAM1_CRF:-13}"
+VAAPI_DEVICE="${CAM1_VAAPI_DEVICE:-/dev/dri/renderD128}"
+VAAPI_QP="${CAM1_VAAPI_QP:-18}"
 GOP="${CAM1_GOP:-15}"
 RTSP_URL="${CAM1_RTSP_URL:-rtsp://mediamtx:8554/cam1}"
 BITRATE="${CAM1_BITRATE:-20M}"
@@ -17,7 +20,7 @@ BUFSIZE="${CAM1_BUFSIZE:-40M}"
 RTBUF_SIZE="${CAM1_RTBUF_SIZE:-64M}"
 X264_PARAMS="${CAM1_X264_PARAMS:-bframes=0:rc-lookahead=0:sync-lookahead=0:scenecut=0}"
 
-encoder_args() {
+cpu_encoder_args() {
   args="
     -an
     -vf format=yuv420p
@@ -38,9 +41,31 @@ encoder_args() {
   printf '%s\n' "$@"
 }
 
-run_mjpeg() {
+vaapi_encoder_args() {
+  args="
+    -an
+    -vaapi_device ${VAAPI_DEVICE}
+    -vf format=nv12,hwupload
+    -c:v h264_vaapi
+    -profile:v ${PROFILE}
+    -qp ${VAAPI_QP}
+    -bf 0
+    -g ${GOP}
+  "
+  if [ -n "${BITRATE}" ]; then
+    args="${args} -b:v ${BITRATE} -maxrate ${BITRATE}"
+  fi
+  if [ -n "${BUFSIZE}" ]; then
+    args="${args} -bufsize ${BUFSIZE}"
+  fi
+  # shellcheck disable=SC2086
+  set -- ${args}
+  printf '%s\n' "$@"
+}
+
+run_mjpeg_cpu() {
   dev="$1"
-  ENCODER_ARGS="$(encoder_args)"
+  ENCODER_ARGS="$(cpu_encoder_args)"
   ffmpeg -hide_banner -loglevel warning \
     -fflags nobuffer -flags low_delay \
     -rtbufsize "${RTBUF_SIZE}" \
@@ -51,9 +76,9 @@ run_mjpeg() {
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
 
-run_yuyv() {
+run_yuyv_cpu() {
   dev="$1"
-  ENCODER_ARGS="$(encoder_args)"
+  ENCODER_ARGS="$(cpu_encoder_args)"
   ffmpeg -hide_banner -loglevel warning \
     -fflags nobuffer -flags low_delay \
     -rtbufsize "${RTBUF_SIZE}" \
@@ -62,6 +87,56 @@ run_yuyv() {
     -i "${dev}" \
     ${ENCODER_ARGS} \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
+}
+
+run_mjpeg_vaapi() {
+  dev="$1"
+  ENCODER_ARGS="$(vaapi_encoder_args)"
+  ffmpeg -hide_banner -loglevel warning \
+    -fflags nobuffer -flags low_delay \
+    -rtbufsize "${RTBUF_SIZE}" \
+    -thread_queue_size "${THREAD_QUEUE}" \
+    -f v4l2 -input_format mjpeg -framerate "${FPS}" -video_size "${RES}" \
+    -i "${dev}" \
+    ${ENCODER_ARGS} \
+    -f rtsp -rtsp_transport tcp "${RTSP_URL}"
+}
+
+run_yuyv_vaapi() {
+  dev="$1"
+  ENCODER_ARGS="$(vaapi_encoder_args)"
+  ffmpeg -hide_banner -loglevel warning \
+    -fflags nobuffer -flags low_delay \
+    -rtbufsize "${RTBUF_SIZE}" \
+    -thread_queue_size "${THREAD_QUEUE}" \
+    -f v4l2 -input_format yuyv422 -framerate "${FPS}" -video_size "${RES}" \
+    -i "${dev}" \
+    ${ENCODER_ARGS} \
+    -f rtsp -rtsp_transport tcp "${RTSP_URL}"
+}
+
+run_mjpeg() {
+  dev="$1"
+  case "${ENCODER}" in
+    h264_vaapi)
+      run_mjpeg_vaapi "${dev}"
+      ;;
+    *)
+      run_mjpeg_cpu "${dev}"
+      ;;
+  esac
+}
+
+run_yuyv() {
+  dev="$1"
+  case "${ENCODER}" in
+    h264_vaapi)
+      run_yuyv_vaapi "${dev}"
+      ;;
+    *)
+      run_yuyv_cpu "${dev}"
+      ;;
+  esac
 }
 
 resolve_device() {
@@ -83,7 +158,7 @@ resolve_device() {
   return 0
 }
 
-echo "cam1 publisher start device=${DEVICE} mode=${MODE} res=${RES} fps=${FPS} gop=${GOP} crf=${CRF} bitrate=${BITRATE:-crf-only} bufsize=${BUFSIZE:-none} preset=${PRESET} profile=${PROFILE}"
+echo "cam1 publisher start device=${DEVICE} mode=${MODE} encoder=${ENCODER} res=${RES} fps=${FPS} gop=${GOP} bitrate=${BITRATE:-crf-only} bufsize=${BUFSIZE:-none}"
 
 while true; do
   ACTIVE_DEVICE="$(resolve_device)"

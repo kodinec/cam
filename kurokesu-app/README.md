@@ -16,9 +16,19 @@ What it does:
 
 Video defaults are tuned for a local-box setup:
 
-- `CAM1_MODE=auto` prefers `yuyv422` first, then falls back to `mjpeg`
+- default path is still CPU `libx264`
 - higher default bitrate / VBV window for fewer macroblocks
-- `x264` preset/profile aimed at quality rather than minimum CPU
+- `x264` profile aimed at quality without the earlier FPS drop
+
+If the host has Intel iGPU exposed as `/dev/dri/renderD128`, you can switch the encoder to hardware:
+
+```dotenv
+CAM1_ENCODER=h264_vaapi
+CAM1_VAAPI_DEVICE=/dev/dri/renderD128
+CAM1_VAAPI_QP=18
+```
+
+This moves H.264 encoding off CPU. Intel hardware is not used automatically just because the host CPU is Intel.
 
 ## Why 8 steps
 
@@ -68,10 +78,11 @@ PTZ_SERIAL_FALLBACK=/dev/serial/by-id/
 WEBRTC_ADDITIONAL_HOSTS=10.10.45.39
 ```
 
-If `auto` does not work well with your camera/USB path, force:
+If you want to stay on the CPU path, keep:
 
 ```dotenv
 CAM1_MODE=mjpeg
+CAM1_ENCODER=libx264
 ```
 
 ## Runtime behavior
