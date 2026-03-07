@@ -62,12 +62,7 @@ func handleStatus(ptz *PTZ) http.HandlerFunc {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		resp := ptz.statusResponse()
-		if _, ok := resp["error"]; ok {
-			writeJSON(w, http.StatusBadGateway, resp)
-			return
-		}
-		writeJSON(w, http.StatusOK, resp)
+		writeJSON(w, http.StatusOK, ptz.statusResponse())
 	}
 }
 

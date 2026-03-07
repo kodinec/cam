@@ -206,8 +206,9 @@ func (p *PTZ) statusResponse() map[string]any {
 
 	status, err := p.queryStatus()
 	resp := map[string]any{
-		"available": true,
-		"mapState":  p.mapState(),
+		"available":       true,
+		"statusAvailable": err == nil,
+		"mapState":        p.mapState(),
 	}
 	if err != nil {
 		resp["error"] = err.Error()
