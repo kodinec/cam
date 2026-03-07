@@ -901,11 +901,8 @@ func (p *PTZ) sendAllowMissingOKLocked(cmd string, wait time.Duration) ([]string
 		wait = 250 * time.Millisecond
 	}
 	lines := p.readAvailableLocked(wait)
-	for _, line := range lines {
-		lc := strings.ToLower(line)
-		if strings.HasPrefix(lc, "error") || strings.HasPrefix(lc, "alarm") {
-			return lines, fmt.Errorf(line)
-		}
+	if bad, ok := firstFatalReplyLine(lines); ok {
+		return lines, fmt.Errorf(bad)
 	}
 	return lines, nil
 }
@@ -1030,6 +1027,16 @@ func statusLine(lines []string) string {
 		return ""
 	}
 	return lines[len(lines)-1]
+}
+
+func firstFatalReplyLine(lines []string) (string, bool) {
+	for _, line := range lines {
+		lc := strings.ToLower(line)
+		if strings.HasPrefix(lc, "error") || strings.HasPrefix(lc, "alarm") {
+			return line, true
+		}
+	}
+	return "", false
 }
 
 func resolveSerialPath(primary, fallback string) string {

@@ -71,3 +71,15 @@ func TestStatusLinePrefersLastStatusFrame(t *testing.T) {
 		t.Fatalf("statusLine() = %q, want %q", got, lines[3])
 	}
 }
+
+func TestFirstFatalReplyLineFindsErrorOrAlarm(t *testing.T) {
+	lines := []string{"ok", "ALARM:1", "<Idle|MPos:0,0,0,0>"}
+
+	got, ok := firstFatalReplyLine(lines)
+	if !ok {
+		t.Fatalf("firstFatalReplyLine() did not find fatal line")
+	}
+	if got != "ALARM:1" {
+		t.Fatalf("firstFatalReplyLine() = %q, want %q", got, "ALARM:1")
+	}
+}
