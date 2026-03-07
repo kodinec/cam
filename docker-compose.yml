@@ -98,17 +98,17 @@ services:
       - -f
       - v4l2
       - -input_format
-      - ${CAM2_INPUT_FORMAT:-h264}
+      - h264
       - -framerate
-      - ${CAM2_FPS:-25}
+      - "25"
       - -video_size
-      - ${CAM2_RES:-1920x1080}
+      - 1920x1080
       - -analyzeduration
-      - ${CAM2_ANALYZE_DURATION:-5M}
+      - 5M
       - -probesize
-      - ${CAM2_PROBE_SIZE:-5M}
+      - 5M
       - -i
-      - ${CAM2_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}
+      - /dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0
       - -an
       - -c:v
       - libx264
@@ -153,7 +153,7 @@ services:
     volumes:
       - /dev:/dev
       - /dev/v4l/by-id:/dev/v4l/by-id:ro
-      - ${CAM1_MAP_FILE:-./zoom8_focusmap.json}:/app/zoom8_focusmap.json:ro
+      - ./zoom8_focusmap.json:/app/zoom8_focusmap.json:ro
     environment:
       LISTEN: ":8787"
       PTZ_USER: ${PTZ_USER:-admin}
@@ -165,9 +165,9 @@ services:
       PTZ_Y_PER_STEP: ${PTZ_Y_PER_STEP:-10.0}
       PTZ_FEED: ${PTZ_FEED:-200}
       PTZ_ALLOW_RAW: ${PTZ_ALLOW_RAW:-false}
-      CAM1_MAP_PATH: ${CAM1_MAP_PATH:-/app/zoom8_focusmap.json}
-      CAM1_MAP_STEPS: ${CAM1_MAP_STEPS:-8}
-      CAM1_MAP_FEED: ${CAM1_MAP_FEED:-180}
+      CAM1_MAP_PATH: /app/zoom8_focusmap.json
+      CAM1_MAP_STEPS: "8"
+      CAM1_MAP_FEED: "180"
       CAM1_RESET: ${CAM1_RESET:-true}
       CAM1_LIMIT_LED: ${CAM1_LIMIT_LED:-true}
       CAM1_IRIS_OPEN: ${CAM1_IRIS_OPEN:-true}
@@ -186,8 +186,8 @@ services:
       CAM1_RELEASE_FEED: ${CAM1_RELEASE_FEED:-80}
       CAM1_RTC_BASE: http://mediamtx:8889/
       CAM2_RTC_BASE: http://mediamtx:8889/
-      CAM2_DEVICE: ${CAM2_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}
-      CAM2_CONTROL_DEVICE: ${CAM2_CONTROL_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}
-      CAM2_ZOOM_STEP: ${CAM2_ZOOM_STEP:-1}
+      CAM2_DEVICE: /dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0
+      CAM2_CONTROL_DEVICE: /dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0
+      CAM2_ZOOM_STEP: "1"
     ports:
       - "8787:8787"
