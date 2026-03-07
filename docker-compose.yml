@@ -20,8 +20,14 @@ services:
       - -hide_banner
       - -loglevel
       - warning
+      - -fflags
+      - nobuffer
+      - -flags
+      - low_delay
+      - -use_wallclock_as_timestamps
+      - "1"
       - -thread_queue_size
-      - ${CAM1_THREAD_QUEUE:-1024}
+      - ${CAM1_THREAD_QUEUE:-256}
       - -f
       - v4l2
       - -framerate
@@ -37,10 +43,24 @@ services:
       - ultrafast
       - -tune
       - zerolatency
+      - -bf
+      - "0"
       - -pix_fmt
       - yuv420p
       - -g
-      - ${CAM1_GOP:-30}
+      - ${CAM1_GOP:-25}
+      - -keyint_min
+      - ${CAM1_GOP:-25}
+      - -sc_threshold
+      - "0"
+      - -flush_packets
+      - "1"
+      - -max_delay
+      - "0"
+      - -muxdelay
+      - "0.0"
+      - -muxpreload
+      - "0.0"
       - -f
       - rtsp
       - -rtsp_transport
@@ -61,8 +81,14 @@ services:
       - -hide_banner
       - -loglevel
       - warning
+      - -fflags
+      - nobuffer
+      - -flags
+      - low_delay
+      - -use_wallclock_as_timestamps
+      - "1"
       - -thread_queue_size
-      - ${CAM2_THREAD_QUEUE:-1024}
+      - ${CAM2_THREAD_QUEUE:-256}
       - -f
       - v4l2
       - -input_format
@@ -72,9 +98,9 @@ services:
       - -video_size
       - ${CAM2_RES:-1024x768}
       - -analyzeduration
-      - ${CAM2_ANALYZE_DURATION:-100M}
+      - ${CAM2_ANALYZE_DURATION:-5M}
       - -probesize
-      - ${CAM2_PROBE_SIZE:-100M}
+      - ${CAM2_PROBE_SIZE:-5M}
       - -i
       - ${CAM2_DEVICE:-/dev/video2}
       - -an
@@ -84,10 +110,24 @@ services:
       - ultrafast
       - -tune
       - zerolatency
+      - -bf
+      - "0"
       - -pix_fmt
       - yuv420p
       - -g
-      - ${CAM2_GOP:-30}
+      - ${CAM2_GOP:-25}
+      - -keyint_min
+      - ${CAM2_GOP:-25}
+      - -sc_threshold
+      - "0"
+      - -flush_packets
+      - "1"
+      - -max_delay
+      - "0"
+      - -muxdelay
+      - "0.0"
+      - -muxpreload
+      - "0.0"
       - -f
       - rtsp
       - -rtsp_transport

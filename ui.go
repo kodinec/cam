@@ -290,11 +290,35 @@ func uiHTML(cfg Config) string {
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 <script>
+function keepNearLiveEdge(video) {
+  if (!video || video._liveEdgeTimer) return;
+  video._liveEdgeTimer = setInterval(() => {
+    if (!video.buffered || video.buffered.length === 0 || video.seeking || video.paused) return;
+    const end = video.buffered.end(video.buffered.length - 1);
+    const lag = end - video.currentTime;
+    if (lag > 2.5) {
+      video.currentTime = Math.max(0, end - 0.15);
+      return;
+    }
+    if (lag > 1.2 && video.playbackRate < 1.07) {
+      video.playbackRate = 1.07;
+      return;
+    }
+    if (lag < 0.7 && video.playbackRate !== 1.0) {
+      video.playbackRate = 1.0;
+    }
+  }, 350);
+}
+
 function attachHLS(videoId, url) {
   const video = document.getElementById(videoId);
   if (!video) return;
+  video.muted = true;
+  video.autoplay = true;
+  video.playsInline = true;
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = url;
+    keepNearLiveEdge(video);
     video.play().catch(() => {});
     return;
   }
@@ -302,12 +326,31 @@ function attachHLS(videoId, url) {
     const hls = new window.Hls({
       enableWorker: true,
       lowLatencyMode: true,
-      liveSyncDurationCount: 3
+      liveSyncDurationCount: 1,
+      liveMaxLatencyDurationCount: 2,
+      maxLiveSyncPlaybackRate: 1.15,
+      maxBufferLength: 1.5,
+      maxMaxBufferLength: 3,
+      backBufferLength: 5,
+      startPosition: -1
     });
     hls.loadSource(url);
     hls.attachMedia(video);
     hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+      keepNearLiveEdge(video);
       video.play().catch(() => {});
+    });
+    hls.on(window.Hls.Events.ERROR, (_, data) => {
+      if (!data || !data.fatal) return;
+      if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
+        hls.startLoad();
+        return;
+      }
+      if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+        hls.recoverMediaError();
+        return;
+      }
+      hls.destroy();
     });
     return;
   }

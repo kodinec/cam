@@ -5,6 +5,9 @@ hlsAddress: :8888
 
 hls: yes
 hlsVariant: lowLatency
+hlsSegmentCount: 2
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
 hlsAlwaysRemux: yes
 hlsAllowOrigin: "*"
 
