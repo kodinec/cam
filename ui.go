@@ -64,7 +64,7 @@ func uiHTML(cfg Config) string {
         linear-gradient(135deg, var(--bg-a), var(--bg-b));
       min-height: 100vh;
     }
-    .wrap { max-width: 1500px; margin: 0 auto; padding: 18px; }
+    .wrap { max-width: 100%%; margin: 0 auto; padding: 18px; }
     .head {
       display: flex;
       justify-content: space-between;
@@ -135,14 +135,17 @@ func uiHTML(cfg Config) string {
     .stream-wrap {
       background: #0a1117;
       position: relative;
-      min-height: 260px;
+      width: 100%%;
+      aspect-ratio: 16 / 9;
+      min-height: 420px;
       border-bottom: 1px solid var(--line);
     }
     .stream-frame {
+      position: absolute;
+      inset: 0;
       width: 100%%;
       height: 100%%;
       display: block;
-      min-height: 260px;
       background: #000;
     }
     .stream-frame {
@@ -214,7 +217,7 @@ func uiHTML(cfg Config) string {
     @media (max-width: 1040px) {
       .grid { grid-template-columns: 1fr; }
       .grid.single { grid-template-columns: 1fr; }
-      .stream-wrap, .stream-frame { min-height: 220px; }
+      .stream-wrap, .stream-frame { min-height: 260px; }
     }
   </style>
 </head>
