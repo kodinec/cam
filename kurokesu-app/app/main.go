@@ -10,10 +10,18 @@ import (
 
 func main() {
 	cfg := loadConfig()
+	if (cfg.User == "") != (cfg.Pass == "") {
+		log.Fatal("invalid auth config: APP_USER and APP_PASS must both be set or both be empty")
+	}
 	log.Printf(
 		"startup listen=%s camera=%s rtc_base=%s map_path=%s map_steps=%d strict_map_limits=%v ptz_serial=%s ptz_baud=%d",
 		cfg.Listen, cfg.CameraName, cfg.RTCBase, cfg.MapPath, cfg.MapSteps, cfg.StrictMapLimits, cfg.PTZSerial, cfg.PTZBaud,
 	)
+	if cfg.User == "" {
+		log.Printf("basic auth disabled")
+	} else {
+		log.Printf("basic auth enabled user=%s", cfg.User)
+	}
 
 	var ptz *PTZ
 	var ptzInitErr error

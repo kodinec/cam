@@ -83,7 +83,13 @@ CAM1_DEVICE=/dev/v4l/by-id/usb-Kurokesu_C3_4K_00001-video-index0
 PTZ_SERIAL=/dev/ttyACM0
 PTZ_SERIAL_FALLBACK=/dev/serial/by-id/
 WEBRTC_ADDITIONAL_HOSTS=10.10.45.39
+APP_USER=admin
+APP_PASS=change-me
 ```
+
+The web UI uses HTTP Basic Auth.
+If `APP_USER` and `APP_PASS` are both empty, auth is disabled.
+If one is set and the other is empty, the service now fails fast on startup instead of silently running with a broken auth config.
 
 If you want to force Intel VAAPI by default, keep:
 
