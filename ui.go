@@ -218,6 +218,8 @@ func uiHTML(cfg Config) string {
       border-bottom: 1px dotted var(--accent-2);
     }
     .stream-link:hover { opacity: 0.85; }
+    .state-online { color: #197b4f; font-weight: 700; }
+    .state-offline { color: #a13e3a; font-weight: 700; }
     .small a:hover { opacity: 0.85; }
     pre {
       margin: 0;
@@ -267,6 +269,7 @@ func uiHTML(cfg Config) string {
           <div class="stream-label">WebRTC stream: <a id="cam1RtcLink" class="stream-link" href="/cam1/rtc/cam1" target="_blank" rel="noopener">/cam1/rtc/cam1</a></div>
         </div>
         <div class="panel-tools">
+          <span id="cam1StreamState" class="small state-online">online</span>
           <button onclick="reloadStream('cam1')">Reload</button>
           <button onclick="openStream('cam1')">Open</button>
           <button class="blue" onclick="fullscreenStream('cam1Rtc', 'cam1')">Fullscreen</button>
@@ -303,6 +306,7 @@ func uiHTML(cfg Config) string {
           <div class="stream-label">WebRTC stream: <a id="cam2RtcLink" class="stream-link" href="/cam2/rtc/cam2" target="_blank" rel="noopener">/cam2/rtc/cam2</a></div>
         </div>
         <div class="panel-tools">
+          <span id="cam2StreamState" class="small">checking...</span>
           <button onclick="reloadStream('cam2')">Reload</button>
           <button onclick="openStream('cam2')">Open</button>
           <button class="blue" onclick="fullscreenStream('cam2Rtc', 'cam2')">Fullscreen</button>
@@ -420,9 +424,27 @@ function bindStreamLinks() {
   if (cam1RTC && cam1RTC.src !== cam1RTCURL) {
     cam1RTC.src = cam1RTCURL;
   }
-  const cam2RTC = document.getElementById('cam2Rtc');
-  if (cam2RTC && cam2RTC.src !== cam2RTCURL) {
-    cam2RTC.src = cam2RTCURL;
+}
+
+function setCam2StreamOnline(online, note) {
+  const state = document.getElementById('cam2StreamState');
+  const frame = document.getElementById('cam2Rtc');
+  if (state) {
+    state.classList.remove('state-online', 'state-offline');
+    if (online) {
+      state.classList.add('state-online');
+      state.textContent = 'online';
+    } else {
+      state.classList.add('state-offline');
+      state.textContent = note ? ('offline: ' + note) : 'offline';
+    }
+  }
+  if (!frame) return;
+  if (online) {
+    const url = mediaMTXWebRTCURL('cam2');
+    if (frame.src !== url) frame.src = url;
+  } else {
+    if (frame.src && frame.src !== 'about:blank') frame.src = 'about:blank';
   }
 }
 
@@ -519,9 +541,11 @@ async function cam2Status() {
     const mode = data.mode ? (' mode=' + data.mode) : '';
     const ctrl = data.control ? (' control=' + data.control) : '';
     setCam2ZoomEnabled(true, 'Linux control via v4l2-ctl' + ctrl + mode);
+    setCam2StreamOnline(true, '');
   } else {
     const err = (data && data.error) ? data.error : 'zoom control is not available in V4L2';
     setCam2ZoomEnabled(false, 'Camera 2 zoom disabled: ' + err);
+    setCam2StreamOnline(false, err);
   }
   return data;
 }
@@ -530,7 +554,7 @@ setView('both');
 bindStreamLinks();
 cam1Status();
 cam2Status();
-setInterval(() => { cam2Status(); }, 15000);
+setInterval(() => { cam2Status(); }, 10000);
 </script>
 </body>
 </html>`,

@@ -20,10 +20,11 @@ run_h264() {
   dev="$1"
   ffmpeg -hide_banner -loglevel warning \
     -fflags nobuffer -flags low_delay -use_wallclock_as_timestamps 1 \
+    -avioflags direct \
     -thread_queue_size "${THREAD_QUEUE}" \
     -f v4l2 -input_format h264 -framerate "${H264_FPS}" -video_size "${H264_RES}" \
     -i "${dev}" \
-    -an -c:v copy \
+    -an -c:v copy -fps_mode passthrough -vsync passthrough \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
 
@@ -31,6 +32,7 @@ run_mjpeg() {
   dev="$1"
   ffmpeg -hide_banner -loglevel warning \
     -fflags nobuffer -flags low_delay -use_wallclock_as_timestamps 1 \
+    -avioflags direct \
     -thread_queue_size "${THREAD_QUEUE}" \
     -f v4l2 -input_format mjpeg -framerate "${MJPEG_FPS}" -video_size "${MJPEG_RES}" \
     -analyzeduration "${ANALYZE}" -probesize "${PROBE}" \
@@ -39,6 +41,7 @@ run_mjpeg() {
     -c:v libx264 -preset ultrafast -crf "${MJPEG_CRF}" -tune zerolatency \
     -bf 0 -pix_fmt yuv420p \
     -g "${GOP}" -keyint_min "${GOP}" -sc_threshold 0 \
+    -fps_mode passthrough -vsync passthrough \
     -flush_packets 1 -max_delay 0 -muxdelay 0.0 -muxpreload 0.0 \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
