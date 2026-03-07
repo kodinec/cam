@@ -138,13 +138,20 @@ func uiHTML(cfg Config) string {
       min-height: 260px;
       border-bottom: 1px solid var(--line);
     }
-    img.stream {
+    .stream,
+    .stream-frame {
       width: 100%%;
-      height: auto;
+      height: 100%%;
       display: block;
       min-height: 260px;
       object-fit: contain;
       background: #000;
+    }
+    .stream-frame {
+      border: 0;
+    }
+    .stream-hidden {
+      display: none !important;
     }
     .controls {
       display: flex;
@@ -212,7 +219,7 @@ func uiHTML(cfg Config) string {
     @media (max-width: 1040px) {
       .grid { grid-template-columns: 1fr; }
       .grid.single { grid-template-columns: 1fr; }
-      .stream-wrap, img.stream { min-height: 220px; }
+      .stream-wrap, .stream, .stream-frame { min-height: 220px; }
     }
   </style>
 </head>
@@ -227,6 +234,8 @@ func uiHTML(cfg Config) string {
       <button id="mode-both" class="mode active" onclick="setView('both')">Both</button>
       <button id="mode-cam1" class="mode" onclick="setView('cam1')">Camera 1</button>
       <button id="mode-cam2" class="mode" onclick="setView('cam2')">Camera 2</button>
+      <button id="transport-webrtc" class="mode active" onclick="setTransport('webrtc')">WebRTC</button>
+      <button id="transport-hls" class="mode" onclick="setTransport('hls')">HLS</button>
     </nav>
   </header>
 
@@ -234,10 +243,11 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam1" class="panel">
       <div class="panel-head">
         <h2>Camera 1: %s</h2>
-        <span class="small">HLS: <a id="cam1HlsLink" href="/cam1/hls/index.m3u8" target="_blank" rel="noopener">/cam1/hls/index.m3u8</a></span>
+        <span class="small">RTC: <a id="cam1RtcLink" href="/cam1/rtc/cam1" target="_blank" rel="noopener">/cam1/rtc/cam1</a> | HLS: <a id="cam1HlsLink" href="/cam1/hls/index.m3u8" target="_blank" rel="noopener">/cam1/hls/index.m3u8</a></span>
       </div>
       <div class="stream-wrap">
-        <video id="cam1Video" class="stream" muted autoplay playsinline controls></video>
+        <iframe id="cam1Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture"></iframe>
+        <video id="cam1Video" class="stream stream-hidden" muted autoplay playsinline controls></video>
       </div>
       <div class="controls">
         <button class="danger" onclick="cam1Home()">Start Flow + Step0</button>
@@ -263,10 +273,11 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam2" class="panel">
       <div class="panel-head">
         <h2>Camera 2: %s</h2>
-        <span class="small">HLS: <a id="cam2HlsLink" href="/cam2/hls/index.m3u8" target="_blank" rel="noopener">/cam2/hls/index.m3u8</a> (stream: %s)</span>
+        <span class="small">RTC: <a id="cam2RtcLink" href="/cam2/rtc/cam2" target="_blank" rel="noopener">/cam2/rtc/cam2</a> | HLS: <a id="cam2HlsLink" href="/cam2/hls/index.m3u8" target="_blank" rel="noopener">/cam2/hls/index.m3u8</a> (stream: %s)</span>
       </div>
       <div class="stream-wrap">
-        <video id="cam2Video" class="stream" muted autoplay playsinline controls></video>
+        <iframe id="cam2Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture"></iframe>
+        <video id="cam2Video" class="stream stream-hidden" muted autoplay playsinline controls></video>
       </div>
       <div class="controls">
         <button id="cam2ZoomMinus" onclick="cam2ZoomDelta(-1)">Zoom -</button>
@@ -370,6 +381,25 @@ function setActiveMode(mode) {
   if (active) active.classList.add('active');
 }
 
+function setTransport(mode) {
+  const resolved = mode === 'hls' ? 'hls' : 'webrtc';
+  for (const m of ['webrtc', 'hls']) {
+    const el = document.getElementById('transport-' + m);
+    if (!el) continue;
+    el.classList.toggle('active', m === resolved);
+  }
+  const useRTC = resolved === 'webrtc';
+  for (const cam of ['cam1', 'cam2']) {
+    const rtc = document.getElementById(cam + 'Rtc');
+    const hls = document.getElementById(cam + 'Video');
+    if (rtc) rtc.classList.toggle('stream-hidden', !useRTC);
+    if (hls) hls.classList.toggle('stream-hidden', useRTC);
+    if (!useRTC && hls && hls.paused) {
+      hls.play().catch(() => {});
+    }
+  }
+}
+
 function setView(mode) {
   const grid = document.getElementById('grid');
   const cam1 = document.getElementById('panel-cam1');
@@ -393,24 +423,48 @@ function absoluteURL(path) {
 }
 
 function bindStreamLinks() {
-  const cam1Path = '/cam1/hls/index.m3u8';
-  const cam2Path = '/cam2/hls/index.m3u8';
-  const cam1URL = absoluteURL(cam1Path);
-  const cam2URL = absoluteURL(cam2Path);
+  const cam1HLSPath = '/cam1/hls/index.m3u8';
+  const cam2HLSPath = '/cam2/hls/index.m3u8';
+  const cam1RTCPath = '/cam1/rtc/cam1?controls=false&autoplay=true&muted=true&playsinline=true';
+  const cam2RTCPath = '/cam2/rtc/cam2?controls=false&autoplay=true&muted=true&playsinline=true';
+  const cam1HLSURL = absoluteURL(cam1HLSPath);
+  const cam2HLSURL = absoluteURL(cam2HLSPath);
+  const cam1RTCURL = absoluteURL(cam1RTCPath);
+  const cam2RTCURL = absoluteURL(cam2RTCPath);
+
+  const cam1RTCLink = document.getElementById('cam1RtcLink');
+  if (cam1RTCLink) {
+    cam1RTCLink.href = cam1RTCURL;
+    cam1RTCLink.textContent = cam1RTCURL;
+  }
+  const cam2RTCLink = document.getElementById('cam2RtcLink');
+  if (cam2RTCLink) {
+    cam2RTCLink.href = cam2RTCURL;
+    cam2RTCLink.textContent = cam2RTCURL;
+  }
 
   const cam1Link = document.getElementById('cam1HlsLink');
   if (cam1Link) {
-    cam1Link.href = cam1URL;
-    cam1Link.textContent = cam1URL;
+    cam1Link.href = cam1HLSURL;
+    cam1Link.textContent = cam1HLSURL;
   }
   const cam2Link = document.getElementById('cam2HlsLink');
   if (cam2Link) {
-    cam2Link.href = cam2URL;
-    cam2Link.textContent = cam2URL;
+    cam2Link.href = cam2HLSURL;
+    cam2Link.textContent = cam2HLSURL;
   }
 
-  attachHLS('cam1Video', cam1URL);
-  attachHLS('cam2Video', cam2URL);
+  const cam1RTC = document.getElementById('cam1Rtc');
+  if (cam1RTC && cam1RTC.src !== cam1RTCURL) {
+    cam1RTC.src = cam1RTCURL;
+  }
+  const cam2RTC = document.getElementById('cam2Rtc');
+  if (cam2RTC && cam2RTC.src !== cam2RTCURL) {
+    cam2RTC.src = cam2RTCURL;
+  }
+
+  attachHLS('cam1Video', cam1HLSURL);
+  attachHLS('cam2Video', cam2HLSURL);
 }
 
 async function api(url, method, body) {
@@ -491,6 +545,7 @@ async function cam2Status() {
 
 setView('both');
 bindStreamLinks();
+setTransport('webrtc');
 cam1Status();
 cam2Status();
 </script>

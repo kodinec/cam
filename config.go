@@ -17,6 +17,8 @@ type Config struct {
 	Cam2Upstream string
 	Cam1HLSBase  string
 	Cam2HLSBase  string
+	Cam1RTCBase  string
+	Cam2RTCBase  string
 	Cam1MapPath  string
 	Cam1MapSteps int
 	Cam1MapFeed  float64
@@ -62,6 +64,8 @@ func loadConfig() Config {
 	flag.StringVar(&cfg.Cam2Upstream, "cam2-upstream", envString("CAM2_UPSTREAM", "http://127.0.0.1:8081/?action=stream"), "camera #2 MJPEG upstream")
 	flag.StringVar(&cfg.Cam1HLSBase, "cam1-hls-base", envString("CAM1_HLS_BASE", "http://mediamtx:8888/cam1/"), "camera #1 HLS base URL for reverse proxy")
 	flag.StringVar(&cfg.Cam2HLSBase, "cam2-hls-base", envString("CAM2_HLS_BASE", "http://mediamtx:8888/cam2/"), "camera #2 HLS base URL for reverse proxy")
+	flag.StringVar(&cfg.Cam1RTCBase, "cam1-rtc-base", envString("CAM1_RTC_BASE", "http://mediamtx:8889/"), "camera #1 WebRTC base URL for reverse proxy")
+	flag.StringVar(&cfg.Cam2RTCBase, "cam2-rtc-base", envString("CAM2_RTC_BASE", "http://mediamtx:8889/"), "camera #2 WebRTC base URL for reverse proxy")
 	flag.StringVar(&cfg.Cam1MapPath, "cam1-map-path", envString("CAM1_MAP_PATH", ""), "camera #1 calibration map JSON path")
 	flag.IntVar(&cfg.Cam1MapSteps, "cam1-map-steps", envInt("CAM1_MAP_STEPS", 8), "camera #1 number of points to use from map")
 	flag.Float64Var(&cfg.Cam1MapFeed, "cam1-map-feed", envFloat("CAM1_MAP_FEED", 180.0), "camera #1 map move feed rate")

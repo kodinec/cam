@@ -2,9 +2,16 @@ services:
   mediamtx:
     image: bluenviron/mediamtx:latest
     restart: unless-stopped
+    environment:
+      MTX_RTSPTRANSPORTS: tcp
+      MTX_WEBRTCADDITIONALHOSTS: ${WEBRTC_ADDITIONAL_HOSTS:-10.10.45.39}
+      MTX_WEBRTCLOCALTCPADDRESS: :8189
     ports:
       - "8554:8554"
       - "8888:8888"
+      - "8889:8889"
+      - "8189:8189/udp"
+      - "8189:8189/tcp"
 
   cam1-publisher:
     image: jrottenberg/ffmpeg:6.1-ubuntu
@@ -182,6 +189,8 @@ services:
       CAM1_RELEASE_FEED: ${CAM1_RELEASE_FEED:-80}
       CAM1_HLS_BASE: http://mediamtx:8888/cam1/
       CAM2_HLS_BASE: http://mediamtx:8888/cam2/
+      CAM1_RTC_BASE: http://mediamtx:8889/
+      CAM2_RTC_BASE: http://mediamtx:8889/
       CAM1_UPSTREAM: http://mediamtx:8888/cam1/index.m3u8
       CAM2_UPSTREAM: http://mediamtx:8888/cam2/index.m3u8
       CAM2_DEVICE: ${CAM2_DEVICE:-/dev/video2}
