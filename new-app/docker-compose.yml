@@ -12,12 +12,44 @@ services:
       - "${MTX_WEBRTC_ICE_PORT:-8189}:8189/udp"
       - "${MTX_WEBRTC_ICE_PORT:-8189}:8189/tcp"
 
+  ptz-init:
+    build:
+      context: ./ptz-init
+      dockerfile: Dockerfile
+    restart: "no"
+    privileged: true
+    volumes:
+      - /dev:/dev
+    environment:
+      PTZ_SERIAL: ${PTZ_SERIAL:-/dev/ttyACM0}
+      PTZ_SERIAL_FALLBACK: ${PTZ_SERIAL_FALLBACK:-/dev/serial/by-id/usb-tomeko_net_STM32F103C8T6_6D8648755083-if00}
+      PTZ_BAUD: ${PTZ_BAUD:-115200}
+      PTZ_RESET: ${PTZ_RESET:-true}
+      PTZ_LIMIT_LED: ${PTZ_LIMIT_LED:-true}
+      PTZ_IRIS_OPEN: ${PTZ_IRIS_OPEN:-true}
+      PTZ_HOME_TIMEOUT: ${PTZ_HOME_TIMEOUT:-25}
+      PTZ_BACKOFF_X: ${PTZ_BACKOFF_X:-1.0}
+      PTZ_BACKOFF_Y: ${PTZ_BACKOFF_Y:-0.5}
+      PTZ_BACKOFF_FEED: ${PTZ_BACKOFF_FEED:-120}
+      PTZ_GOTO_FEED: ${PTZ_GOTO_FEED:-200}
+      PTZ_START_X: ${PTZ_START_X:-0.0}
+      PTZ_START_Y: ${PTZ_START_Y:-0.0}
+      PTZ_RELEASE_STEP_X: ${PTZ_RELEASE_STEP_X:-0.2}
+      PTZ_RELEASE_STEP_Y: ${PTZ_RELEASE_STEP_Y:-0.2}
+      PTZ_RELEASE_MAX_STEPS: ${PTZ_RELEASE_MAX_STEPS:-40}
+      PTZ_RELEASE_FEED: ${PTZ_RELEASE_FEED:-80}
+      PTZ_INIT_MAX_TRIES: ${PTZ_INIT_MAX_TRIES:-0}
+      PTZ_INIT_RETRY_SEC: ${PTZ_INIT_RETRY_SEC:-2}
+
   cam1-publisher:
     image: jrottenberg/ffmpeg:6.1-ubuntu
     restart: unless-stopped
     privileged: true
     depends_on:
-      - mediamtx
+      mediamtx:
+        condition: service_started
+      ptz-init:
+        condition: service_completed_successfully
     volumes:
       - /dev:/dev
       - ./scripts:/scripts:ro
