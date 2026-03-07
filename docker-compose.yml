@@ -22,7 +22,7 @@ services:
       - /dev:/dev
       - ./scripts:/scripts:ro
     environment:
-      CAM1_DEVICE: ${CAM1_DEVICE:-/dev/video0}
+      CAM1_DEVICE: ${CAM1_DEVICE:-/dev/v4l/by-id/usb-Kurokesu_C3_4K_00001-video-index0}
       CAM1_MODE: ${CAM1_MODE:-mjpeg}
       CAM1_FPS: ${CAM1_FPS:-25}
       CAM1_RES: ${CAM1_RES:-1920x1080}
