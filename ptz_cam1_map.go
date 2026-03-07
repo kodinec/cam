@@ -292,17 +292,28 @@ func (p *PTZ) cam1MapState() map[string]any {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.cam1Map == nil {
-		return map[string]any{"enabled": false}
+		return map[string]any{"enabled": false, "homed": p.cam1Homed}
 	}
 	return map[string]any{
-		"enabled":      true,
-		"path":         p.cam1Map.Path,
-		"coordSpace":   p.cam1Map.CoordSpace,
-		"xPreload":     p.cam1Map.XPreload,
-		"points":       len(p.cam1Map.ZoomX),
-		"maxIndex":     p.cam1Map.MaxIndex(),
-		"currentIndex": p.cam1CurrentIndex,
+		"enabled":       true,
+		"path":          p.cam1Map.Path,
+		"coordSpace":    p.cam1Map.CoordSpace,
+		"xPreload":      p.cam1Map.XPreload,
+		"points":        len(p.cam1Map.ZoomX),
+		"maxIndex":      p.cam1Map.MaxIndex(),
+		"currentIndex":  p.cam1CurrentIndex,
+		"homed":         p.cam1Homed,
+		"focusFineStep": p.cam1FocusFineStep,
 	}
+}
+
+func (p *PTZ) cam1MapMeta() (enabled bool, coord string, homed bool, focusFineStep float64) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.cam1Map == nil {
+		return false, "", p.cam1Homed, p.cam1FocusFineStep
+	}
+	return true, p.cam1Map.CoordSpace, p.cam1Homed, p.cam1FocusFineStep
 }
 
 func (p *PTZ) cam1MapMaxIndex() int {
@@ -324,9 +335,13 @@ func (p *PTZ) gotoCam1MapIndex(idx int) (map[string]any, error) {
 	p.mu.Lock()
 	m := p.cam1Map
 	feed := p.cam1MapFeed
+	homed := p.cam1Homed
 	p.mu.Unlock()
 	if m == nil {
 		return nil, errors.New("cam1 map is not configured")
+	}
+	if !homed {
+		return nil, errors.New("cam1 map is not homed yet. Run /api/cam1/home first")
 	}
 	if idx < 0 || idx > m.MaxIndex() {
 		return nil, fmt.Errorf("index must be in range 0..%d", m.MaxIndex())
@@ -495,6 +510,7 @@ func (p *PTZ) runCam1StartFlow() (map[string]any, error) {
 	p.cam1CurrentIndex = 0
 	p.logicalZoom = 0
 	p.logicalFocus = 0
+	p.cam1Homed = true
 	p.mu.Unlock()
 
 	resp := map[string]any{

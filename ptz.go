@@ -11,21 +11,23 @@ import (
 )
 
 type PTZ struct {
-	mu               sync.Mutex
-	port             *serial.Port
-	serialPath       string
-	serialBaud       int
-	cmdTimeout       time.Duration
-	zoomMax          int
-	xPerStep         float64
-	yPerStep         float64
-	feed             float64
-	logicalZoom      int
-	logicalFocus     int
-	cam1Map          *Cam1Map
-	cam1MapFeed      float64
-	cam1HomeCfg      cam1HomeConfig
-	cam1CurrentIndex int
+	mu                sync.Mutex
+	port              *serial.Port
+	serialPath        string
+	serialBaud        int
+	cmdTimeout        time.Duration
+	zoomMax           int
+	xPerStep          float64
+	yPerStep          float64
+	feed              float64
+	logicalZoom       int
+	logicalFocus      int
+	cam1Map           *Cam1Map
+	cam1MapFeed       float64
+	cam1FocusFineStep float64
+	cam1HomeCfg       cam1HomeConfig
+	cam1CurrentIndex  int
+	cam1Homed         bool
 }
 
 func newPTZ(cfg Config) (*PTZ, error) {
@@ -44,18 +46,19 @@ func newPTZ(cfg Config) (*PTZ, error) {
 	}
 
 	p := &PTZ{
-		port:         sp,
-		serialPath:   cfg.PTZSerial,
-		serialBaud:   cfg.PTZBaud,
-		cmdTimeout:   3 * time.Second,
-		zoomMax:      cfg.PTZZoomMax,
-		xPerStep:     cfg.PTZXPerStep,
-		yPerStep:     cfg.PTZYPerStep,
-		feed:         cfg.PTZFeed,
-		logicalZoom:  0,
-		logicalFocus: 0,
-		cam1Map:      cam1Map,
-		cam1MapFeed:  cfg.Cam1MapFeed,
+		port:              sp,
+		serialPath:        cfg.PTZSerial,
+		serialBaud:        cfg.PTZBaud,
+		cmdTimeout:        3 * time.Second,
+		zoomMax:           cfg.PTZZoomMax,
+		xPerStep:          cfg.PTZXPerStep,
+		yPerStep:          cfg.PTZYPerStep,
+		feed:              cfg.PTZFeed,
+		logicalZoom:       0,
+		logicalFocus:      0,
+		cam1Map:           cam1Map,
+		cam1MapFeed:       cfg.Cam1MapFeed,
+		cam1FocusFineStep: cfg.Cam1FocusFineStep,
 		cam1HomeCfg: cam1HomeConfig{
 			Reset:          cfg.Cam1Reset,
 			LimitLED:       cfg.Cam1LimitLED,
@@ -74,6 +77,7 @@ func newPTZ(cfg Config) (*PTZ, error) {
 			ReleaseMaxStep: cfg.Cam1ReleaseMaxStep,
 			ReleaseFeed:    cfg.Cam1ReleaseFeed,
 		},
+		cam1Homed: false,
 	}
 	if cam1Map != nil && cam1Map.MaxIndex() >= 0 {
 		p.zoomMax = cam1Map.MaxIndex()
@@ -171,29 +175,50 @@ func (p *PTZ) setLogicalFocus(v int) {
 }
 
 func (p *PTZ) commandThenStatus(cmd string) (reply []string, status []string, err error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	reply, err = p.sendExpectOKLocked("G90")
+	reply, err = p.commandOK("G90")
 	if err != nil {
 		return reply, nil, err
 	}
-	moveReply, err := p.sendExpectOKLocked(cmd)
+	moveReply, err := p.commandOK(cmd)
 	if err != nil {
 		return append(reply, moveReply...), nil, err
 	}
 	reply = append(reply, moveReply...)
-	status, err = p.sendExpectStatusLocked("?")
+	status, err = p.queryStatus()
 	return reply, status, err
 }
 
 func (p *PTZ) queryStatus() ([]string, error) {
+	status, err := p.queryStatusOnce()
+	if err == nil || !isRetryableSerialErr(err) {
+		return status, err
+	}
+	log.Printf("ptz status transient err=%v; reopening serial and retrying", err)
+	if reopenErr := p.reopenSerial(); reopenErr != nil {
+		return status, fmt.Errorf("%w; reopen failed: %v", err, reopenErr)
+	}
+	return p.queryStatusOnce()
+}
+
+func (p *PTZ) queryStatusOnce() ([]string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.sendExpectStatusLocked("?")
 }
 
 func (p *PTZ) commandOK(cmd string) ([]string, error) {
+	lines, err := p.commandOKOnce(cmd)
+	if err == nil || !isRetryableSerialErr(err) {
+		return lines, err
+	}
+	log.Printf("ptz command transient cmd=%q err=%v; reopening serial and retrying", cmd, err)
+	if reopenErr := p.reopenSerial(); reopenErr != nil {
+		return lines, fmt.Errorf("%w; reopen failed: %v", err, reopenErr)
+	}
+	return p.commandOKOnce(cmd)
+}
+
+func (p *PTZ) commandOKOnce(cmd string) ([]string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.sendExpectOKLocked(cmd)
@@ -325,4 +350,24 @@ func (p *PTZ) readAvailableLocked(window time.Duration) []string {
 		}
 	}
 	return out
+}
+
+func isRetryableSerialErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "eof") {
+		return true
+	}
+	if strings.Contains(msg, "input/output error") {
+		return true
+	}
+	if strings.Contains(msg, "serial port closed") {
+		return true
+	}
+	if strings.Contains(msg, "device or resource busy") {
+		return true
+	}
+	return false
 }

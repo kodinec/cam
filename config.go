@@ -30,17 +30,18 @@ type Config struct {
 	PTZFeed     float64
 	PTZAllowRaw bool
 
-	Cam1Reset       bool
-	Cam1LimitLED    bool
-	Cam1IrisOpen    bool
-	Cam1HomeFocus   bool
-	Cam1HomeTimeout float64
-	Cam1BackoffX    float64
-	Cam1BackoffY    float64
-	Cam1BackoffFeed float64
-	Cam1StartX      float64
-	Cam1StartY      float64
-	Cam1GotoFeed    float64
+	Cam1Reset         bool
+	Cam1LimitLED      bool
+	Cam1IrisOpen      bool
+	Cam1HomeFocus     bool
+	Cam1HomeTimeout   float64
+	Cam1BackoffX      float64
+	Cam1BackoffY      float64
+	Cam1BackoffFeed   float64
+	Cam1StartX        float64
+	Cam1StartY        float64
+	Cam1GotoFeed      float64
+	Cam1FocusFineStep float64
 
 	Cam1AutoRelease    bool
 	Cam1ReleaseStepX   float64
@@ -84,6 +85,7 @@ func loadConfig() Config {
 	flag.Float64Var(&cfg.Cam1StartX, "cam1-start-x", envFloat("CAM1_START_X", 0.0), "camera #1 start X before zeroing")
 	flag.Float64Var(&cfg.Cam1StartY, "cam1-start-y", envFloat("CAM1_START_Y", 0.0), "camera #1 start Y before zeroing")
 	flag.Float64Var(&cfg.Cam1GotoFeed, "cam1-goto-feed", envFloat("CAM1_GOTO_FEED", 200.0), "camera #1 goto feed")
+	flag.Float64Var(&cfg.Cam1FocusFineStep, "cam1-focus-fine-step", envFloat("CAM1_FOCUS_FINE_STEP", 0.05), "camera #1 manual focus fine step (Y units) in map mode")
 	flag.BoolVar(&cfg.Cam1AutoRelease, "cam1-auto-release", envBool("CAM1_AUTO_RELEASE", true), "camera #1 start flow: auto release active X/Y limits")
 	flag.Float64Var(&cfg.Cam1ReleaseStepX, "cam1-release-step-x", envFloat("CAM1_RELEASE_STEP_X", 0.2), "camera #1 auto-release step for X")
 	flag.Float64Var(&cfg.Cam1ReleaseStepY, "cam1-release-step-y", envFloat("CAM1_RELEASE_STEP_Y", 0.2), "camera #1 auto-release step for Y")

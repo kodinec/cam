@@ -15,145 +15,67 @@ services:
   cam1-publisher:
     image: jrottenberg/ffmpeg:6.1-ubuntu
     restart: unless-stopped
-    privileged: true
     depends_on:
       - mediamtx
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
     volumes:
-      - /dev:/dev
+      - ./scripts:/scripts:ro
       - /dev/v4l/by-id:/dev/v4l/by-id:ro
-    command:
-      - -hide_banner
-      - -loglevel
-      - warning
-      - -fflags
-      - nobuffer
-      - -flags
-      - low_delay
-      - -use_wallclock_as_timestamps
-      - "1"
-      - -thread_queue_size
-      - ${CAM1_THREAD_QUEUE:-256}
-      - -f
-      - v4l2
-      - -framerate
-      - ${CAM1_FPS:-25}
-      - -video_size
-      - ${CAM1_RES:-1920x1080}
-      - -i
-      - ${CAM1_DEVICE:-/dev/video0}
-      - -an
-      - -c:v
-      - libx264
-      - -preset
-      - ${CAM1_X264_PRESET:-veryfast}
-      - -crf
-      - ${CAM1_CRF:-18}
-      - -tune
-      - zerolatency
-      - -bf
-      - "0"
-      - -pix_fmt
-      - yuv420p
-      - -g
-      - ${CAM1_GOP:-25}
-      - -keyint_min
-      - ${CAM1_GOP:-25}
-      - -sc_threshold
-      - "0"
-      - -flush_packets
-      - "1"
-      - -max_delay
-      - "0"
-      - -muxdelay
-      - "0.0"
-      - -muxpreload
-      - "0.0"
-      - -f
-      - rtsp
-      - -rtsp_transport
-      - tcp
-      - rtsp://mediamtx:8554/cam1
+    environment:
+      CAM1_DEVICE: ${CAM1_DEVICE:-/dev/video0}
+      CAM1_FPS: ${CAM1_FPS:-25}
+      CAM1_RES: ${CAM1_RES:-1920x1080}
+      CAM1_THREAD_QUEUE: ${CAM1_THREAD_QUEUE:-256}
+      CAM1_X264_PRESET: ${CAM1_X264_PRESET:-veryfast}
+      CAM1_CRF: ${CAM1_CRF:-18}
+      CAM1_GOP: ${CAM1_GOP:-25}
+      CAM1_RTSP_URL: rtsp://mediamtx:8554/cam1
+    command: ["/bin/sh", "/scripts/cam1_publisher.sh"]
 
   cam2-publisher:
     image: jrottenberg/ffmpeg:6.1-ubuntu
     restart: unless-stopped
-    privileged: true
     depends_on:
       - mediamtx
+    devices:
+      - /dev/video2:/dev/video2
+      - /dev/video3:/dev/video3
     volumes:
-      - /dev:/dev
+      - ./scripts:/scripts:ro
       - /dev/v4l/by-id:/dev/v4l/by-id:ro
-    command:
-      - -hide_banner
-      - -loglevel
-      - warning
-      - -fflags
-      - nobuffer
-      - -flags
-      - low_delay
-      - -use_wallclock_as_timestamps
-      - "1"
-      - -thread_queue_size
-      - ${CAM2_THREAD_QUEUE:-256}
-      - -f
-      - v4l2
-      - -input_format
-      - mjpeg
-      - -framerate
-      - "15"
-      - -video_size
-      - 1024x768
-      - -analyzeduration
-      - 5M
-      - -probesize
-      - 5M
-      - -i
-      - /dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0
-      - -an
-      - -c:v
-      - libx264
-      - -preset
-      - ultrafast
-      - -tune
-      - zerolatency
-      - -bf
-      - "0"
-      - -pix_fmt
-      - yuv420p
-      - -g
-      - ${CAM2_GOP:-25}
-      - -keyint_min
-      - ${CAM2_GOP:-25}
-      - -sc_threshold
-      - "0"
-      - -flush_packets
-      - "1"
-      - -max_delay
-      - "0"
-      - -muxdelay
-      - "0.0"
-      - -muxpreload
-      - "0.0"
-      - -f
-      - rtsp
-      - -rtsp_transport
-      - tcp
-      - rtsp://mediamtx:8554/cam2
+    environment:
+      CAM2_DEVICE: ${CAM2_DEVICE:-/dev/video2}
+      CAM2_MODE: ${CAM2_MODE:-auto}
+      CAM2_THREAD_QUEUE: ${CAM2_THREAD_QUEUE:-256}
+      CAM2_H264_RES: ${CAM2_H264_RES:-1920x1080}
+      CAM2_H264_FPS: ${CAM2_H264_FPS:-30}
+      CAM2_MJPEG_RES: ${CAM2_MJPEG_RES:-1024x768}
+      CAM2_MJPEG_FPS: ${CAM2_MJPEG_FPS:-15}
+      CAM2_GOP: ${CAM2_GOP:-25}
+      CAM2_ANALYZE_DURATION: ${CAM2_ANALYZE_DURATION:-5M}
+      CAM2_PROBE_SIZE: ${CAM2_PROBE_SIZE:-5M}
+      CAM2_MJPEG_CRF: ${CAM2_MJPEG_CRF:-24}
+      CAM2_RTSP_URL: rtsp://mediamtx:8554/cam2
+    command: ["/bin/sh", "/scripts/cam2_publisher.sh"]
 
   ptz-service:
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    privileged: true
     depends_on:
       - mediamtx
       - cam1-publisher
       - cam2-publisher
+    devices:
+      - ${PTZ_SERIAL:-/dev/ttyACM0}:${PTZ_SERIAL:-/dev/ttyACM0}
+      - /dev/video2:/dev/video2
+      - /dev/video3:/dev/video3
     volumes:
-      - /dev:/dev
+      - ${CAM1_MAP_FILE:-./zoom8_focusmap.json}:/app/zoom8_focusmap.json:ro
       - /dev/v4l/by-id:/dev/v4l/by-id:ro
-      - ./zoom8_focusmap.json:/app/zoom8_focusmap.json:ro
     environment:
       LISTEN: ":8787"
       PTZ_USER: ${PTZ_USER:-admin}
@@ -179,6 +101,7 @@ services:
       CAM1_START_X: ${CAM1_START_X:-0.0}
       CAM1_START_Y: ${CAM1_START_Y:-0.0}
       CAM1_GOTO_FEED: ${CAM1_GOTO_FEED:-200}
+      CAM1_FOCUS_FINE_STEP: ${CAM1_FOCUS_FINE_STEP:-0.05}
       CAM1_AUTO_RELEASE: ${CAM1_AUTO_RELEASE:-true}
       CAM1_RELEASE_STEP_X: ${CAM1_RELEASE_STEP_X:-0.2}
       CAM1_RELEASE_STEP_Y: ${CAM1_RELEASE_STEP_Y:-0.2}
@@ -186,8 +109,8 @@ services:
       CAM1_RELEASE_FEED: ${CAM1_RELEASE_FEED:-80}
       CAM1_RTC_BASE: http://mediamtx:8889/
       CAM2_RTC_BASE: http://mediamtx:8889/
-      CAM2_DEVICE: /dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0
-      CAM2_CONTROL_DEVICE: /dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0
+      CAM2_DEVICE: ${CAM2_DEVICE:-/dev/video2}
+      CAM2_CONTROL_DEVICE: ${CAM2_CONTROL_DEVICE:-/dev/video2}
       CAM2_ZOOM_STEP: "1"
     ports:
       - "8787:8787"

@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type setDeltaRequest struct {
@@ -18,6 +20,11 @@ type rawRequest struct {
 	Cmd string `json:"cmd"`
 }
 
+type focusSetDeltaRequest struct {
+	Set   *float64 `json:"set"`
+	Delta *int     `json:"delta"`
+}
+
 type apiError struct {
 	Error string `json:"error"`
 }
@@ -25,6 +32,18 @@ type apiError struct {
 func parseSetDelta(r *http.Request) (set *int, delta *int, err error) {
 	defer r.Body.Close()
 	var req setDeltaRequest
+	if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&req); err != nil {
+		return nil, nil, fmt.Errorf("invalid json: %w", err)
+	}
+	if (req.Set == nil && req.Delta == nil) || (req.Set != nil && req.Delta != nil) {
+		return nil, nil, fmt.Errorf("provide exactly one of: set or delta")
+	}
+	return req.Set, req.Delta, nil
+}
+
+func parseFocusSetDelta(r *http.Request) (set *float64, delta *int, err error) {
+	defer r.Body.Close()
+	var req focusSetDeltaRequest
 	if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&req); err != nil {
 		return nil, nil, fmt.Errorf("invalid json: %w", err)
 	}
@@ -48,6 +67,15 @@ func handleZoom(ptz *PTZ) http.HandlerFunc {
 
 		currentZoom, _ := ptz.logicalState()
 		if ptz.cam1MapMaxIndex() >= 0 {
+			_, _, mapHomed, _ := ptz.cam1MapMeta()
+			if !mapHomed {
+				writeJSON(w, http.StatusConflict, map[string]any{
+					"error":       "cam1 map is not homed yet. Run /api/cam1/home first",
+					"logicalZoom": currentZoom,
+					"mapState":    ptz.cam1MapState(),
+				})
+				return
+			}
 			nextIdx := ptz.cam1MapCurrentIndex()
 			maxIdx := ptz.cam1MapMaxIndex()
 			if set != nil {
@@ -132,9 +160,66 @@ func handleFocus(ptz *PTZ) http.HandlerFunc {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		set, delta, err := parseSetDelta(r)
+		set, delta, err := parseFocusSetDelta(r)
 		if err != nil {
 			writeJSON(w, http.StatusBadRequest, apiError{Error: err.Error()})
+			return
+		}
+
+		mapEnabled, mapCoord, mapHomed, fineStep := ptz.cam1MapMeta()
+		if mapEnabled {
+			if !mapHomed {
+				writeJSON(w, http.StatusConflict, apiError{Error: "cam1 map is not homed yet. Run /api/cam1/home first"})
+				return
+			}
+			if fineStep <= 0 {
+				fineStep = 0.05
+			}
+
+			var reply []string
+			var status []string
+			if delta != nil {
+				if *delta != -1 && *delta != 1 {
+					writeJSON(w, http.StatusBadRequest, apiError{Error: "delta must be -1 or +1"})
+					return
+				}
+				dy := float64(*delta) * fineStep
+				reply, status, err = ptz.moveRel(nil, &dy, ptz.feed, 10*time.Second)
+			} else {
+				targetY := *set
+				if mapCoord == "mpos" {
+					reply, status, err = ptz.moveToMPos(nil, &targetY, ptz.feed, 20*time.Second)
+				} else {
+					reply, status, err = ptz.moveAbsWPos(nil, &targetY, ptz.feed, 20*time.Second)
+				}
+			}
+			if err != nil {
+				writeJSON(w, http.StatusBadGateway, map[string]any{
+					"error":       err.Error(),
+					"replyLines":  reply,
+					"statusReply": statusLine(status),
+					"statusLines": status,
+					"mapState":    ptz.cam1MapState(),
+				})
+				return
+			}
+			resp := map[string]any{
+				"ok":          true,
+				"mapEnabled":  true,
+				"coordSpace":  mapCoord,
+				"focusStep":   fineStep,
+				"replyLines":  reply,
+				"statusReply": statusLine(status),
+				"statusLines": status,
+				"mapState":    ptz.cam1MapState(),
+			}
+			if set != nil {
+				resp["targetY"] = *set
+			}
+			if delta != nil {
+				resp["delta"] = *delta
+			}
+			writeJSON(w, http.StatusOK, resp)
 			return
 		}
 
@@ -142,11 +227,12 @@ func handleFocus(ptz *PTZ) http.HandlerFunc {
 		logicalMax := ptz.zoomMax
 		nextFocus := currentFocus
 		if set != nil {
-			if *set < 0 || *set > logicalMax {
+			setInt := int(math.Round(*set))
+			if setInt < 0 || setInt > logicalMax {
 				writeJSON(w, http.StatusBadRequest, apiError{Error: fmt.Sprintf("set must be in range 0..%d", logicalMax)})
 				return
 			}
-			nextFocus = *set
+			nextFocus = setInt
 		}
 		if delta != nil {
 			if *delta != -1 && *delta != 1 {

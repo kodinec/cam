@@ -245,23 +245,23 @@ func uiHTML(cfg Config) string {
         <iframe id="cam1Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture"></iframe>
       </div>
       <div class="controls">
-        <button class="danger" onclick="cam1Home()">Start Flow + Step0</button>
+        <button id="cam1HomeBtn" class="danger" onclick="cam1Home()">Start Flow + Step0</button>
         <span id="cam1MapInfo" class="small">Map: loading...</span>
       </div>
       <div class="controls">
-        <button onclick="cam1ZoomDelta(-1)">Zoom -</button>
-        <button class="accent" onclick="cam1ZoomDelta(1)">Zoom +</button>
+        <button id="cam1ZoomMinus" onclick="cam1ZoomDelta(-1)">Zoom -</button>
+        <button id="cam1ZoomPlus" class="accent" onclick="cam1ZoomDelta(1)">Zoom +</button>
         <label>Set</label>
         <input id="cam1ZoomSet" type="number" min="0" max="%d" value="0" />
-        <button class="blue" onclick="cam1ZoomSet()">Apply</button>
+        <button id="cam1ZoomApply" class="blue" onclick="cam1ZoomSet()">Apply</button>
       </div>
       <div class="controls">
-        <button onclick="cam1FocusDelta(-1)">Focus -</button>
-        <button class="accent" onclick="cam1FocusDelta(1)">Focus +</button>
-        <label>Set</label>
-        <input id="cam1FocusSet" type="number" min="0" max="%d" value="0" />
-        <button class="blue" onclick="cam1FocusSet()">Apply</button>
-        <button onclick="cam1Status()">Status</button>
+        <button id="cam1FocusMinus" onclick="cam1FocusDelta(-1)">Focus -</button>
+        <button id="cam1FocusPlus" class="accent" onclick="cam1FocusDelta(1)">Focus +</button>
+        <label>Set Y</label>
+        <input id="cam1FocusSet" type="number" step="0.05" value="0.00" />
+        <button id="cam1FocusApply" class="blue" onclick="cam1FocusSet()">Apply</button>
+        <button id="cam1StatusBtn" onclick="cam1Status()">Status</button>
       </div>
     </section>
 
@@ -375,20 +375,34 @@ function updateCam1State(data) {
   const state = data.mapState || (data.step0 && data.step0.mapState) || null;
   const info = document.getElementById('cam1MapInfo');
   const zoomSet = document.getElementById('cam1ZoomSet');
+  const controls = ['cam1ZoomMinus', 'cam1ZoomPlus', 'cam1ZoomSet', 'cam1ZoomApply', 'cam1FocusMinus', 'cam1FocusPlus', 'cam1FocusSet', 'cam1FocusApply'];
 
   if (state && state.enabled) {
     const idx = Number(state.currentIndex ?? data.mapIndex ?? 0);
     const max = Number(state.maxIndex ?? 0);
+    const homed = Boolean(state.homed);
     if (zoomSet) {
       zoomSet.max = String(max);
       zoomSet.value = String(idx);
     }
+    for (const id of controls) {
+      const el = document.getElementById(id);
+      if (el) el.disabled = !homed;
+    }
     if (info) {
       const coord = state.coordSpace || 'wpos';
       const preload = Number(state.xPreload || 0).toFixed(3);
-      info.textContent = 'Map ON: idx=' + idx + '/' + max + ' coord=' + coord + ' preload=' + preload;
+      if (homed) {
+        info.textContent = 'Map ON: idx=' + idx + '/' + max + ' coord=' + coord + ' preload=' + preload;
+      } else {
+        info.textContent = 'Map ON but NOT HOMED. Press "Start Flow + Step0".';
+      }
     }
   } else if (info) {
+    for (const id of controls) {
+      const el = document.getElementById(id);
+      if (el) el.disabled = false;
+    }
     info.textContent = 'Map OFF: legacy linear mode';
   }
   return data;
@@ -441,7 +455,6 @@ cam2Status();
 </body>
 </html>`,
 		esc(cfg.Cam1Name),
-		max,
 		max,
 		esc(cfg.Cam2Name),
 		esc(cfg.Cam2CtrlDev),
