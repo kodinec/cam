@@ -9,6 +9,7 @@ THREAD_QUEUE="${CAM1_THREAD_QUEUE:-64}"
 ENCODER="${CAM1_ENCODER:-libx264}"
 VAAPI_FALLBACK="${CAM1_VAAPI_FALLBACK:-true}"
 VAAPI_DRIVER="${CAM1_VAAPI_DRIVER:-}"
+VAAPI_RC_MODE="${CAM1_VAAPI_RC_MODE:-quality}"
 PRESET="${CAM1_X264_PRESET:-superfast}"
 TUNE="${CAM1_X264_TUNE:-zerolatency}"
 PROFILE="${CAM1_X264_PROFILE:-high}"
@@ -26,13 +27,39 @@ if [ -n "${VAAPI_DRIVER}" ]; then
   export LIBVA_DRIVER_NAME="${VAAPI_DRIVER}"
 fi
 
+cpu_video_filter() {
+  input_mode="$1"
+  case "${input_mode}" in
+    mjpeg)
+      printf '%s\n' "scale=in_range=pc:out_range=tv,format=yuv420p"
+      ;;
+    *)
+      printf '%s\n' "scale=in_range=tv:out_range=tv,format=yuv420p"
+      ;;
+  esac
+}
+
+vaapi_video_filter() {
+  input_mode="$1"
+  case "${input_mode}" in
+    mjpeg)
+      printf '%s\n' "scale=in_range=pc:out_range=tv,format=nv12,hwupload"
+      ;;
+    *)
+      printf '%s\n' "scale=in_range=tv:out_range=tv,format=nv12,hwupload"
+      ;;
+  esac
+}
+
 cpu_encoder_args() {
+  input_mode="$1"
+  FILTER="$(cpu_video_filter "${input_mode}")"
   args="
     -an
-    -vf format=yuv420p
+    -vf ${FILTER}
     -c:v libx264 -preset ${PRESET} -crf ${CRF} -tune ${TUNE}
     -profile:v ${PROFILE}
-    -bf 0 -pix_fmt yuv420p
+    -bf 0 -pix_fmt yuv420p -color_range tv
     -x264-params ${X264_PARAMS}
     -g ${GOP} -keyint_min ${GOP} -sc_threshold 0
   "
@@ -48,22 +75,36 @@ cpu_encoder_args() {
 }
 
 vaapi_encoder_args() {
+  input_mode="$1"
+  FILTER="$(vaapi_video_filter "${input_mode}")"
   args="
     -an
     -vaapi_device ${VAAPI_DEVICE}
-    -vf format=nv12,hwupload
+    -vf ${FILTER}
     -c:v h264_vaapi
     -profile:v ${PROFILE}
-    -qp ${VAAPI_QP}
+    -color_range tv
     -bf 0
     -g ${GOP}
   "
-  if [ -n "${BITRATE}" ]; then
-    args="${args} -b:v ${BITRATE} -maxrate ${BITRATE}"
-  fi
-  if [ -n "${BUFSIZE}" ]; then
-    args="${args} -bufsize ${BUFSIZE}"
-  fi
+  case "${VAAPI_RC_MODE}" in
+    quality)
+      args="${args} -rc_mode CQP -qp ${VAAPI_QP}"
+      ;;
+    bitrate)
+      args="${args} -rc_mode CBR"
+      if [ -n "${BITRATE}" ]; then
+        args="${args} -b:v ${BITRATE} -maxrate ${BITRATE}"
+      fi
+      if [ -n "${BUFSIZE}" ]; then
+        args="${args} -bufsize ${BUFSIZE}"
+      fi
+      ;;
+    *)
+      echo "cam1 invalid CAM1_VAAPI_RC_MODE=${VAAPI_RC_MODE}; expected quality or bitrate" >&2
+      return 1
+      ;;
+  esac
   # shellcheck disable=SC2086
   set -- ${args}
   printf '%s\n' "$@"
@@ -71,7 +112,7 @@ vaapi_encoder_args() {
 
 run_mjpeg_cpu() {
   dev="$1"
-  ENCODER_ARGS="$(cpu_encoder_args)"
+  ENCODER_ARGS="$(cpu_encoder_args mjpeg)"
   ffmpeg -hide_banner -loglevel warning \
     -fflags nobuffer -flags low_delay \
     -rtbufsize "${RTBUF_SIZE}" \
@@ -84,7 +125,7 @@ run_mjpeg_cpu() {
 
 run_yuyv_cpu() {
   dev="$1"
-  ENCODER_ARGS="$(cpu_encoder_args)"
+  ENCODER_ARGS="$(cpu_encoder_args yuyv)"
   ffmpeg -hide_banner -loglevel warning \
     -fflags nobuffer -flags low_delay \
     -rtbufsize "${RTBUF_SIZE}" \
@@ -97,7 +138,7 @@ run_yuyv_cpu() {
 
 run_mjpeg_vaapi() {
   dev="$1"
-  ENCODER_ARGS="$(vaapi_encoder_args)"
+  ENCODER_ARGS="$(vaapi_encoder_args mjpeg)"
   ffmpeg -hide_banner -loglevel warning \
     -fflags nobuffer -flags low_delay \
     -rtbufsize "${RTBUF_SIZE}" \
@@ -110,7 +151,7 @@ run_mjpeg_vaapi() {
 
 run_yuyv_vaapi() {
   dev="$1"
-  ENCODER_ARGS="$(vaapi_encoder_args)"
+  ENCODER_ARGS="$(vaapi_encoder_args yuyv)"
   ffmpeg -hide_banner -loglevel warning \
     -fflags nobuffer -flags low_delay \
     -rtbufsize "${RTBUF_SIZE}" \
@@ -193,7 +234,28 @@ probe_vaapi() {
   return 0
 }
 
-echo "cam1 publisher start device=${DEVICE} mode=${MODE} encoder=${ENCODER} res=${RES} fps=${FPS} gop=${GOP} bitrate=${BITRATE:-crf-only} bufsize=${BUFSIZE:-none}"
+startup_rate_summary() {
+  case "${ENCODER}" in
+    h264_vaapi)
+      case "${VAAPI_RC_MODE}" in
+        quality)
+          printf '%s\n' "encoder=${ENCODER} rc_mode=${VAAPI_RC_MODE} qp=${VAAPI_QP}"
+          ;;
+        bitrate)
+          printf '%s\n' "encoder=${ENCODER} rc_mode=${VAAPI_RC_MODE} bitrate=${BITRATE:-unset} bufsize=${BUFSIZE:-unset}"
+          ;;
+        *)
+          printf '%s\n' "encoder=${ENCODER} rc_mode=${VAAPI_RC_MODE}"
+          ;;
+      esac
+      ;;
+    *)
+      printf '%s\n' "encoder=${ENCODER} crf=${CRF} bitrate=${BITRATE:-crf-only} bufsize=${BUFSIZE:-none}"
+      ;;
+  esac
+}
+
+echo "cam1 publisher start device=${DEVICE} mode=${MODE} $(startup_rate_summary) res=${RES} fps=${FPS} gop=${GOP}"
 probe_vaapi
 
 while true; do

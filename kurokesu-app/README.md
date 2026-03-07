@@ -16,9 +16,9 @@ What it does:
 
 Video defaults are tuned for a local-box setup:
 
-- default path is still CPU `libx264`
-- higher default bitrate / VBV window for fewer macroblocks
-- `x264` profile aimed at quality without the earlier FPS drop
+- default path in this repo is Intel `h264_vaapi` when `/dev/dri` is available
+- `h264_vaapi` defaults to `quality` mode, so `QP` drives quality and `BITRATE/BUFSIZE` are ignored there
+- automatic fallback to `libx264` stays enabled if VAAPI init fails
 
 If the host has Intel iGPU exposed as `/dev/dri/renderD128`, you can switch the encoder to hardware:
 
@@ -27,6 +27,7 @@ CAM1_ENCODER=h264_vaapi
 CAM1_VAAPI_FALLBACK=true
 CAM1_VAAPI_DEVICE=/dev/dri/renderD128
 CAM1_VAAPI_DRIVER=iHD
+CAM1_VAAPI_RC_MODE=quality
 CAM1_VAAPI_QP=18
 ```
 
@@ -88,6 +89,7 @@ If you want to force Intel VAAPI by default, keep:
 CAM1_MODE=mjpeg
 CAM1_ENCODER=h264_vaapi
 CAM1_VAAPI_DRIVER=iHD
+CAM1_VAAPI_RC_MODE=quality
 ```
 
 If `iHD` does not initialize on your host, switch to:
@@ -95,6 +97,19 @@ If `iHD` does not initialize on your host, switch to:
 ```dotenv
 CAM1_VAAPI_DRIVER=i965
 ```
+
+If you want a fixed-rate VAAPI stream instead of QP-driven quality, switch to:
+
+```dotenv
+CAM1_ENCODER=h264_vaapi
+CAM1_VAAPI_RC_MODE=bitrate
+CAM1_BITRATE=20M
+CAM1_BUFSIZE=40M
+```
+
+In `quality` mode, only `CAM1_VAAPI_QP` is used.
+In `bitrate` mode, `CAM1_BITRATE` and `CAM1_BUFSIZE` are used.
+`libx264` still uses `CAM1_CRF` plus `CAM1_BITRATE` / `CAM1_BUFSIZE`.
 
 If you want to stay on the CPU path, keep:
 
