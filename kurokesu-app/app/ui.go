@@ -75,20 +75,6 @@ func uiHTML(cfg Config) string {
       flex-wrap: wrap;
     }
     h1 { margin: 0; font-size: clamp(20px, 2.2vw, 34px); letter-spacing: 0.2px; }
-    .ver {
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 3px 10px;
-      font-size: 12px;
-      color: var(--muted);
-      background: #ffffffcc;
-    }
-    .summary {
-      color: var(--muted);
-      font-size: 13px;
-      max-width: 520px;
-      text-align: right;
-    }
     .panel {
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -106,17 +92,6 @@ func uiHTML(cfg Config) string {
       background: #ffffffb5;
     }
     .panel-head h2 { margin: 0; font-size: clamp(15px, 1.35vw, 24px); line-height: 1.2; }
-    .stream-label {
-      margin-top: 6px;
-      font-size: 12px;
-      color: var(--muted);
-      overflow-wrap: anywhere;
-    }
-    .stream-link {
-      color: var(--accent-2);
-      text-decoration: none;
-      border-bottom: 1px dotted var(--accent-2);
-    }
     .panel-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .stream-wrap {
       background: #0a1117;
@@ -221,7 +196,6 @@ func uiHTML(cfg Config) string {
     @media (max-width: 960px) {
       .head, .panel-head { grid-template-columns: 1fr; }
       .head { align-items: flex-start; flex-direction: column; }
-      .summary { text-align: left; max-width: none; }
       .panel-tools { justify-content: flex-start; }
     }
   </style>
@@ -312,7 +286,6 @@ function frameStatusLooksOffline() {
   try {
     const doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
     const text = doc && doc.body ? String(doc.body.innerText || '').toLowerCase() : '';
-    if (!text) return true;
     if (text.includes('error:') || text.includes('retrying') || text.includes('bad status') || text.includes('stream not found')) {
       return true;
     }
