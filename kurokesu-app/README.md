@@ -10,8 +10,7 @@ What it does:
 
 - publishes Camera 1 to MediaMTX (`FFmpeg -> RTSP -> WebRTC`)
 - serves a root-style UI focused on one camera
-- keeps UI/auth/reverse proxy in Go
-- runs map-based zoom/focus in a dedicated Python PTZ service derived from `camzoom.py`
+- runs map-based zoom from `camzoom.py` logic
 - uses the first `8` steps from `zoom25_focusmap.json`
 - keeps `limitXY` safety metadata and rejects flagged selected points by default
 
@@ -41,7 +40,6 @@ UI:
 ## Main env vars
 
 - `.env` is the main runtime config file for this project
-- `PTZ_API_BASE`
 - `PTZ_SERIAL`
 - `PTZ_SERIAL_FALLBACK`
 - `PTZ_BAUD`
@@ -66,12 +64,7 @@ WEBRTC_ADDITIONAL_HOSTS=10.10.45.39
 
 ## Runtime behavior
 
-Runtime split:
-
-- `web` (Go): UI, Basic Auth, WebRTC reverse proxy, `/api/*` reverse proxy
-- `ptz` (Python): serial controller, map playback, focus runtime, status API
-
-The PTZ home flow is:
+The home flow is:
 
 1. `RESET`
 2. `UNLOCK ($X)`
@@ -94,5 +87,5 @@ After homing, the UI sends map-index moves:
 
 ```bash
 docker compose ps
-docker compose logs --tail 120 mediamtx cam1-publisher ptz web
+docker compose logs --tail 120 mediamtx cam1-publisher web
 ```
