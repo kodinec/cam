@@ -23,7 +23,7 @@ func uiHTML(cfg Config) string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>kurokesu zoom helper</title>
+  <title>eyes helper</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
@@ -154,14 +154,16 @@ func uiHTML(cfg Config) string {
       color: var(--muted);
     }
     .badge-online {
-      color: #0d5b45;
-      background: rgba(31, 143, 106, 0.14);
-      border-color: rgba(31, 143, 106, 0.35);
+      color: #0a4a37;
+      background: rgba(31, 143, 106, 0.22);
+      border-color: rgba(31, 143, 106, 0.52);
+      box-shadow: inset 0 0 0 1px rgba(31, 143, 106, 0.08);
     }
     .badge-offline {
-      color: #8d2d2a;
-      background: rgba(180, 67, 63, 0.14);
-      border-color: rgba(180, 67, 63, 0.35);
+      color: #7b221f;
+      background: rgba(180, 67, 63, 0.22);
+      border-color: rgba(180, 67, 63, 0.52);
+      box-shadow: inset 0 0 0 1px rgba(180, 67, 63, 0.08);
     }
     .badge-checking {
       color: var(--muted);
@@ -204,17 +206,17 @@ func uiHTML(cfg Config) string {
 <div class="wrap">
   <header class="head">
     <div class="title">
-      <h1>kurokesu zoom helper</h1>
+      <h1>eyes helper</h1>
     </div>
   </header>
 
   <section class="panel">
     <div class="panel-head">
       <div>
-        <h2>Camera</h2>
+        <h2>Camera RGB</h2>
       </div>
       <div class="panel-tools">
-        <span id="cameraBadge" class="badge">camera checking</span>
+        <span id="cameraBadge" class="badge">checking</span>
         <button onclick="reloadStream()">Reload</button>
         <button onclick="openStream()">Open</button>
         <button class="blue" onclick="fullscreenStream()">Fullscreen</button>
@@ -226,7 +228,7 @@ func uiHTML(cfg Config) string {
     </div>
 
     <div class="controls">
-      <button id="homeBtn" class="danger" onclick="camHome()">Start Flow + Step0</button>
+      <button id="homeBtn" class="danger" onclick="camHome()">Cam Reset</button>
       <button onclick="camStatus()">Status</button>
       <span id="mapInfo" class="small">Map: loading...</span>
     </div>
@@ -267,16 +269,16 @@ function setCameraBadge(mode) {
   if (!badge) return;
   badge.classList.remove('badge-online', 'badge-offline', 'badge-checking');
   if (mode === true) {
-    badge.textContent = 'camera online';
+    badge.textContent = 'online';
     badge.classList.add('badge-online');
     return;
   }
   if (mode === false) {
-    badge.textContent = 'camera offline';
+    badge.textContent = 'offline';
     badge.classList.add('badge-offline');
     return;
   }
-  badge.textContent = 'camera checking';
+  badge.textContent = 'checking';
   badge.classList.add('badge-checking');
 }
 
