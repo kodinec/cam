@@ -16,6 +16,7 @@ type Config struct {
 	MapPath         string
 	MapSteps        int
 	StrictMapLimits bool
+	AutoHomeOnStart bool
 
 	PTZSerial         string
 	PTZSerialFallback string
@@ -50,6 +51,7 @@ func loadConfig() Config {
 	flag.StringVar(&cfg.MapPath, "map-path", envString("CAM_MAP_PATH", "/app/focusmap.json"), "zoom/focus map JSON path")
 	flag.IntVar(&cfg.MapSteps, "map-steps", envInt("CAM_MAP_STEPS", 8), "number of map steps to use from the source map")
 	flag.BoolVar(&cfg.StrictMapLimits, "strict-map-limits", envBool("CAM_STRICT_MAP_LIMITS", true), "reject selected map points flagged with limitXY")
+	flag.BoolVar(&cfg.AutoHomeOnStart, "auto-home-on-start", envBool("CAM_AUTO_HOME_ON_START", true), "run home flow and step 0 once during service startup")
 
 	flag.StringVar(&cfg.PTZSerial, "ptz-serial", envString("PTZ_SERIAL", "/dev/ttyACM0"), "PTZ serial device")
 	flag.StringVar(&cfg.PTZSerialFallback, "ptz-serial-fallback", envString("PTZ_SERIAL_FALLBACK", "/dev/serial/by-id/"), "fallback PTZ serial device path")

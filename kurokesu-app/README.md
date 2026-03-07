@@ -69,6 +69,7 @@ UI:
 - `CAM1_DEVICE`
 - `CAM_MAP_STEPS` default `8`
 - `CAM_STRICT_MAP_LIMITS` default `true`
+- `CAM_AUTO_HOME_ON_START` default `true`
 - `APP_USER`
 - `APP_PASS`
 
@@ -85,11 +86,13 @@ PTZ_SERIAL_FALLBACK=/dev/serial/by-id/
 WEBRTC_ADDITIONAL_HOSTS=10.10.45.39
 APP_USER=admin
 APP_PASS=change-me
+CAM_AUTO_HOME_ON_START=true
 ```
 
 The web UI uses HTTP Basic Auth.
 If `APP_USER` and `APP_PASS` are both empty, auth is disabled.
 If one is set and the other is empty, the service now fails fast on startup instead of silently running with a broken auth config.
+The service also runs one automatic home flow on process startup by default, so zoom/focus controls are ready on first page load.
 
 If you want to force Intel VAAPI by default, keep:
 

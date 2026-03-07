@@ -498,6 +498,24 @@ func (p *PTZ) runStartFlow() (map[string]any, error) {
 	}, nil
 }
 
+func (p *PTZ) homeAndStep0() (map[string]any, error) {
+	resp, err := p.runStartFlow()
+	if err != nil {
+		return nil, err
+	}
+	step0, err := p.gotoIndex(0)
+	if err != nil {
+		return map[string]any{
+			"flowResult":  resp,
+			"afterHomeOK": true,
+			"mapState":    p.mapState(),
+		}, err
+	}
+	resp["step0"] = step0
+	resp["mapState"] = p.mapState()
+	return resp, nil
+}
+
 func (p *PTZ) moveAbsWPos(x *float64, y *float64, feed float64, timeout time.Duration) ([]string, []string, error) {
 	if x == nil && y == nil {
 		return nil, nil, nil

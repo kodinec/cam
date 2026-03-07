@@ -30,6 +30,14 @@ func main() {
 		log.Printf("ptz init failed (service will run in degraded mode): %v", ptzInitErr)
 	} else {
 		defer ptz.Close()
+		if cfg.AutoHomeOnStart {
+			log.Printf("ptz auto-home on start enabled")
+			if _, err := ptz.homeAndStep0(); err != nil {
+				log.Printf("ptz auto-home on start failed: %v", err)
+			} else {
+				log.Printf("ptz auto-home on start completed")
+			}
+		}
 	}
 
 	private := http.NewServeMux()

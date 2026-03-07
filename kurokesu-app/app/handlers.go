@@ -72,24 +72,19 @@ func handleHome(ptz *PTZ) http.HandlerFunc {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		resp, err := ptz.runStartFlow()
+		resp, err := ptz.homeAndStep0()
 		if err != nil {
 			log.Printf("start flow failed err=%v", err)
-			writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			out := map[string]any{
+				"error":    err.Error(),
+				"mapState": ptz.mapState(),
+			}
+			for k, v := range resp {
+				out[k] = v
+			}
+			writeJSON(w, http.StatusBadGateway, out)
 			return
 		}
-		step0, err := ptz.gotoIndex(0)
-		if err != nil {
-			writeJSON(w, http.StatusBadGateway, map[string]any{
-				"error":       err.Error(),
-				"flowResult":  resp,
-				"afterHomeOK": true,
-				"mapState":    ptz.mapState(),
-			})
-			return
-		}
-		resp["step0"] = step0
-		resp["mapState"] = ptz.mapState()
 		writeJSON(w, http.StatusOK, resp)
 	}
 }
