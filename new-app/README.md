@@ -49,6 +49,7 @@ ls -l /dev/v4l/by-id/
 - Publishers use primary `by-id` path and fallback `/dev/videoN`.
 - Camera 1 stream is gated by `ptz-init` startup sequence:
   `RESET -> $X -> M120 -> M114 -> $HX -> $HY -> BACKOFF -> GOTO START -> AUTO RELEASE LIMITS -> G92`.
+- `ptz-init` retries are finite by default (`PTZ_INIT_MAX_TRIES=40`), so startup won't hang forever.
 - If Camera 2 repeatedly switches between `idProduct=0000` and `idProduct=1005`,
   this is USB/firmware instability (outside app logic). In that state software can
   only retry; stream will flap until the device stabilizes.

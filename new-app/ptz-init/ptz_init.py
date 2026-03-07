@@ -226,8 +226,8 @@ def run_once() -> None:
 
 
 def main() -> int:
-    max_tries = env_int("PTZ_INIT_MAX_TRIES", 0)
-    retry_sec = env_float("PTZ_INIT_RETRY_SEC", 2.0)
+    max_tries = env_int("PTZ_INIT_MAX_TRIES", 40)
+    retry_sec = env_float("PTZ_INIT_RETRY_SEC", 1.5)
     attempt = 0
 
     while True:
