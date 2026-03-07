@@ -1,0 +1,79 @@
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    restart: unless-stopped
+    environment:
+      MTX_RTSPTRANSPORTS: tcp
+      MTX_WEBRTCADDITIONALHOSTS: ${WEBRTC_ADDITIONAL_HOSTS:-10.10.45.39}
+      MTX_WEBRTCLOCALTCPADDRESS: :8189
+    ports:
+      - "${MTX_RTSP_PORT:-8554}:8554"
+      - "${MTX_WEBRTC_ICE_PORT:-8189}:8189/udp"
+      - "${MTX_WEBRTC_ICE_PORT:-8189}:8189/tcp"
+
+  cam1-publisher:
+    image: jrottenberg/ffmpeg:6.1-ubuntu
+    restart: unless-stopped
+    privileged: true
+    depends_on:
+      - mediamtx
+    volumes:
+      - /dev:/dev
+      - ./scripts:/scripts:ro
+    environment:
+      CAM1_DEVICE: ${CAM1_DEVICE:-/dev/v4l/by-id/usb-Kurokesu_C3_4K_00001-video-index0}
+      CAM1_MODE: ${CAM1_MODE:-mjpeg}
+      CAM1_FPS: ${CAM1_FPS:-25}
+      CAM1_RES: ${CAM1_RES:-1920x1080}
+      CAM1_THREAD_QUEUE: ${CAM1_THREAD_QUEUE:-64}
+      CAM1_X264_PRESET: ${CAM1_X264_PRESET:-superfast}
+      CAM1_CRF: ${CAM1_CRF:-14}
+      CAM1_BITRATE: ${CAM1_BITRATE:-10M}
+      CAM1_BUFSIZE: ${CAM1_BUFSIZE:-512k}
+      CAM1_GOP: ${CAM1_GOP:-15}
+      CAM1_RTSP_URL: rtsp://mediamtx:8554/cam1
+    entrypoint: ["/bin/sh", "/scripts/cam1_publisher.sh"]
+
+  web:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    privileged: true
+    depends_on:
+      - mediamtx
+      - cam1-publisher
+    volumes:
+      - /dev:/dev
+      - ./zoom25_focusmap.json:/app/zoom25_focusmap.json:ro
+    environment:
+      LISTEN: :8787
+      CAMERA_NAME: ${CAMERA_NAME:-Kurokesu C3 4K + L085/L085D}
+      RTC_BASE: http://mediamtx:8889/
+      CAM_MAP_PATH: /app/zoom25_focusmap.json
+      CAM_MAP_STEPS: ${CAM_MAP_STEPS:-8}
+      CAM_STRICT_MAP_LIMITS: ${CAM_STRICT_MAP_LIMITS:-true}
+      CAM_MAP_FEED: ${CAM_MAP_FEED:-180}
+      CAM_FOCUS_FINE_STEP: ${CAM_FOCUS_FINE_STEP:-0.05}
+      PTZ_SERIAL: ${PTZ_SERIAL:-/dev/ttyACM0}
+      PTZ_BAUD: ${PTZ_BAUD:-115200}
+      CAM_RESET: ${CAM_RESET:-true}
+      CAM_LIMIT_LED: ${CAM_LIMIT_LED:-true}
+      CAM_IRIS_OPEN: ${CAM_IRIS_OPEN:-true}
+      CAM_HOME_FOCUS: ${CAM_HOME_FOCUS:-true}
+      CAM_HOME_TIMEOUT: ${CAM_HOME_TIMEOUT:-25}
+      CAM_BACKOFF_X: ${CAM_BACKOFF_X:-1.0}
+      CAM_BACKOFF_Y: ${CAM_BACKOFF_Y:-0.5}
+      CAM_BACKOFF_FEED: ${CAM_BACKOFF_FEED:-120}
+      CAM_START_X: ${CAM_START_X:-0.0}
+      CAM_START_Y: ${CAM_START_Y:-0.0}
+      CAM_GOTO_FEED: ${CAM_GOTO_FEED:-200}
+      CAM_AUTO_RELEASE: ${CAM_AUTO_RELEASE:-true}
+      CAM_RELEASE_STEP_X: ${CAM_RELEASE_STEP_X:-0.2}
+      CAM_RELEASE_STEP_Y: ${CAM_RELEASE_STEP_Y:-0.2}
+      CAM_RELEASE_MAX_STEPS: ${CAM_RELEASE_MAX_STEPS:-40}
+      CAM_RELEASE_FEED: ${CAM_RELEASE_FEED:-80}
+      APP_USER: ${APP_USER:-}
+      APP_PASS: ${APP_PASS:-}
+    ports:
+      - "${WEB_PORT:-8787}:8787"
