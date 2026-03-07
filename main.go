@@ -3,15 +3,14 @@ package main
 import (
 	"errors"
 	"log"
-	"net"
 	"net/http"
 	"time"
 )
 
 func main() {
 	cfg := loadConfig()
-	log.Printf("startup listen=%s cam1_hls_base=%s cam2_hls_base=%s cam1_rtc_base=%s cam2_rtc_base=%s cam1_map_path=%s cam1_map_steps=%d cam2_device=%s cam2_control_device=%s cam2_zoom_step=%d ptz_serial=%s ptz_baud=%d zoom_max=%d x_per_step=%.3f y_per_step=%.3f feed=%.1f raw=%v",
-		cfg.Listen, cfg.Cam1HLSBase, cfg.Cam2HLSBase, cfg.Cam1RTCBase, cfg.Cam2RTCBase, cfg.Cam1MapPath, cfg.Cam1MapSteps, cfg.Cam2Device, cfg.Cam2CtrlDev, cfg.Cam2ZoomStep, cfg.PTZSerial, cfg.PTZBaud, cfg.PTZZoomMax, cfg.PTZXPerStep, cfg.PTZYPerStep, cfg.PTZFeed, cfg.PTZAllowRaw,
+	log.Printf("startup listen=%s cam1_rtc_base=%s cam2_rtc_base=%s cam1_map_path=%s cam1_map_steps=%d cam2_device=%s cam2_control_device=%s cam2_zoom_step=%d ptz_serial=%s ptz_baud=%d zoom_max=%d x_per_step=%.3f y_per_step=%.3f feed=%.1f raw=%v",
+		cfg.Listen, cfg.Cam1RTCBase, cfg.Cam2RTCBase, cfg.Cam1MapPath, cfg.Cam1MapSteps, cfg.Cam2Device, cfg.Cam2CtrlDev, cfg.Cam2ZoomStep, cfg.PTZSerial, cfg.PTZBaud, cfg.PTZZoomMax, cfg.PTZXPerStep, cfg.PTZYPerStep, cfg.PTZFeed, cfg.PTZAllowRaw,
 	)
 
 	ptz, err := newPTZ(cfg)
@@ -20,17 +19,6 @@ func main() {
 	}
 	defer ptz.Close()
 	cam2Zoom := newCam2Zoom(cfg)
-
-	proxyClient := &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   3 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).DialContext,
-			ResponseHeaderTimeout: 5 * time.Second,
-		},
-	}
 
 	private := http.NewServeMux()
 	private.HandleFunc("/", serveUI(cfg))
@@ -41,10 +29,6 @@ func main() {
 	private.HandleFunc("/api/cam1/raw", handleRaw(ptz, cfg.PTZAllowRaw))
 	private.HandleFunc("/api/cam2/zoom", handleCam2Zoom(cam2Zoom))
 	private.HandleFunc("/api/cam2/zoom/status", handleCam2ZoomStatus(cam2Zoom))
-	private.HandleFunc("/cam1/mjpeg", makeMJPEGProxy(proxyClient, cfg.Cam1Upstream, "cam1"))
-	private.HandleFunc("/cam2/mjpeg", makeMJPEGProxy(proxyClient, cfg.Cam2Upstream, "cam2"))
-	private.HandleFunc("/cam1/hls/", makePrefixReverseProxy(cfg.Cam1HLSBase, "/cam1/hls/", "cam1-hls"))
-	private.HandleFunc("/cam2/hls/", makePrefixReverseProxy(cfg.Cam2HLSBase, "/cam2/hls/", "cam2-hls"))
 	private.HandleFunc("/cam1/rtc/", makePrefixReverseProxy(cfg.Cam1RTCBase, "/cam1/rtc/", "cam1-rtc"))
 	private.HandleFunc("/cam2/rtc/", makePrefixReverseProxy(cfg.Cam2RTCBase, "/cam2/rtc/", "cam2-rtc"))
 

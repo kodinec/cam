@@ -138,20 +138,15 @@ func uiHTML(cfg Config) string {
       min-height: 260px;
       border-bottom: 1px solid var(--line);
     }
-    .stream,
     .stream-frame {
       width: 100%%;
       height: 100%%;
       display: block;
       min-height: 260px;
-      object-fit: contain;
       background: #000;
     }
     .stream-frame {
       border: 0;
-    }
-    .stream-hidden {
-      display: none !important;
     }
     .controls {
       display: flex;
@@ -219,7 +214,7 @@ func uiHTML(cfg Config) string {
     @media (max-width: 1040px) {
       .grid { grid-template-columns: 1fr; }
       .grid.single { grid-template-columns: 1fr; }
-      .stream-wrap, .stream, .stream-frame { min-height: 220px; }
+      .stream-wrap, .stream-frame { min-height: 220px; }
     }
   </style>
 </head>
@@ -234,8 +229,7 @@ func uiHTML(cfg Config) string {
       <button id="mode-both" class="mode active" onclick="setView('both')">Both</button>
       <button id="mode-cam1" class="mode" onclick="setView('cam1')">Camera 1</button>
       <button id="mode-cam2" class="mode" onclick="setView('cam2')">Camera 2</button>
-      <button id="transport-webrtc" class="mode active" onclick="setTransport('webrtc')">WebRTC</button>
-      <button id="transport-hls" class="mode" onclick="setTransport('hls')">HLS</button>
+      <span class="mode active">WebRTC</span>
     </nav>
   </header>
 
@@ -243,11 +237,10 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam1" class="panel">
       <div class="panel-head">
         <h2>Camera 1: %s</h2>
-        <span class="small">RTC: <a id="cam1RtcLink" href="/cam1/rtc/cam1" target="_blank" rel="noopener">/cam1/rtc/cam1</a> | HLS: <a id="cam1HlsLink" href="/cam1/hls/index.m3u8" target="_blank" rel="noopener">/cam1/hls/index.m3u8</a></span>
+        <span class="small">RTC: <a id="cam1RtcLink" href="/cam1/rtc/cam1" target="_blank" rel="noopener">/cam1/rtc/cam1</a></span>
       </div>
       <div class="stream-wrap">
         <iframe id="cam1Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture"></iframe>
-        <video id="cam1Video" class="stream stream-hidden" muted autoplay playsinline controls></video>
       </div>
       <div class="controls">
         <button class="danger" onclick="cam1Home()">Start Flow + Step0</button>
@@ -273,11 +266,10 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam2" class="panel">
       <div class="panel-head">
         <h2>Camera 2: %s</h2>
-        <span class="small">RTC: <a id="cam2RtcLink" href="/cam2/rtc/cam2" target="_blank" rel="noopener">/cam2/rtc/cam2</a> | HLS: <a id="cam2HlsLink" href="/cam2/hls/index.m3u8" target="_blank" rel="noopener">/cam2/hls/index.m3u8</a> (stream: %s)</span>
+        <span class="small">RTC: <a id="cam2RtcLink" href="/cam2/rtc/cam2" target="_blank" rel="noopener">/cam2/rtc/cam2</a></span>
       </div>
       <div class="stream-wrap">
         <iframe id="cam2Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture"></iframe>
-        <video id="cam2Video" class="stream stream-hidden" muted autoplay playsinline controls></video>
       </div>
       <div class="controls">
         <button id="cam2ZoomMinus" onclick="cam2ZoomDelta(-1)">Zoom -</button>
@@ -299,77 +291,7 @@ func uiHTML(cfg Config) string {
   </section>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 <script>
-function keepNearLiveEdge(video) {
-  if (!video || video._liveEdgeTimer) return;
-  video._liveEdgeTimer = setInterval(() => {
-    if (!video.buffered || video.buffered.length === 0 || video.seeking || video.paused) return;
-    const end = video.buffered.end(video.buffered.length - 1);
-    const lag = end - video.currentTime;
-    if (lag > 2.5) {
-      video.currentTime = Math.max(0, end - 0.15);
-      return;
-    }
-    if (lag > 1.2 && video.playbackRate < 1.07) {
-      video.playbackRate = 1.07;
-      return;
-    }
-    if (lag < 0.7 && video.playbackRate !== 1.0) {
-      video.playbackRate = 1.0;
-    }
-  }, 350);
-}
-
-function attachHLS(videoId, url) {
-  const video = document.getElementById(videoId);
-  if (!video) return;
-  video.muted = true;
-  video.autoplay = true;
-  video.playsInline = true;
-  if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = url;
-    keepNearLiveEdge(video);
-    video.play().catch(() => {});
-    return;
-  }
-  if (window.Hls && window.Hls.isSupported()) {
-    const hls = new window.Hls({
-      enableWorker: true,
-      lowLatencyMode: true,
-      liveSyncDurationCount: 1,
-      liveMaxLatencyDurationCount: 2,
-      maxLiveSyncPlaybackRate: 1.15,
-      maxBufferLength: 1.5,
-      maxMaxBufferLength: 3,
-      backBufferLength: 5,
-      startPosition: -1
-    });
-    hls.loadSource(url);
-    hls.attachMedia(video);
-    hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-      keepNearLiveEdge(video);
-      video.play().catch(() => {});
-    });
-    hls.on(window.Hls.Events.ERROR, (_, data) => {
-      if (!data || !data.fatal) return;
-      if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
-        hls.startLoad();
-        return;
-      }
-      if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
-        hls.recoverMediaError();
-        return;
-      }
-      hls.destroy();
-    });
-    return;
-  }
-  const log = document.getElementById('log');
-  if (log) {
-    log.textContent = JSON.stringify({ error: 'HLS unsupported in this browser', url }, null, 2);
-  }
-}
 
 function setActiveMode(mode) {
   for (const id of ['mode-both', 'mode-cam1', 'mode-cam2']) {
@@ -379,25 +301,6 @@ function setActiveMode(mode) {
   }
   const active = document.getElementById('mode-' + mode);
   if (active) active.classList.add('active');
-}
-
-function setTransport(mode) {
-  const resolved = mode === 'hls' ? 'hls' : 'webrtc';
-  for (const m of ['webrtc', 'hls']) {
-    const el = document.getElementById('transport-' + m);
-    if (!el) continue;
-    el.classList.toggle('active', m === resolved);
-  }
-  const useRTC = resolved === 'webrtc';
-  for (const cam of ['cam1', 'cam2']) {
-    const rtc = document.getElementById(cam + 'Rtc');
-    const hls = document.getElementById(cam + 'Video');
-    if (rtc) rtc.classList.toggle('stream-hidden', !useRTC);
-    if (hls) hls.classList.toggle('stream-hidden', useRTC);
-    if (!useRTC && hls && hls.paused) {
-      hls.play().catch(() => {});
-    }
-  }
 }
 
 function setView(mode) {
@@ -418,10 +321,6 @@ function setView(mode) {
   setActiveMode(mode);
 }
 
-function absoluteURL(path) {
-  return new URL(path, window.location.origin).toString();
-}
-
 function mediaMTXWebRTCURL(streamName) {
   const u = new URL(window.location.href);
   u.port = '8889';
@@ -432,10 +331,6 @@ function mediaMTXWebRTCURL(streamName) {
 }
 
 function bindStreamLinks() {
-  const cam1HLSPath = '/cam1/hls/index.m3u8';
-  const cam2HLSPath = '/cam2/hls/index.m3u8';
-  const cam1HLSURL = absoluteURL(cam1HLSPath);
-  const cam2HLSURL = absoluteURL(cam2HLSPath);
   const cam1RTCURL = mediaMTXWebRTCURL('cam1');
   const cam2RTCURL = mediaMTXWebRTCURL('cam2');
 
@@ -450,17 +345,6 @@ function bindStreamLinks() {
     cam2RTCLink.textContent = cam2RTCURL;
   }
 
-  const cam1Link = document.getElementById('cam1HlsLink');
-  if (cam1Link) {
-    cam1Link.href = cam1HLSURL;
-    cam1Link.textContent = cam1HLSURL;
-  }
-  const cam2Link = document.getElementById('cam2HlsLink');
-  if (cam2Link) {
-    cam2Link.href = cam2HLSURL;
-    cam2Link.textContent = cam2HLSURL;
-  }
-
   const cam1RTC = document.getElementById('cam1Rtc');
   if (cam1RTC && cam1RTC.src !== cam1RTCURL) {
     cam1RTC.src = cam1RTCURL;
@@ -469,9 +353,6 @@ function bindStreamLinks() {
   if (cam2RTC && cam2RTC.src !== cam2RTCURL) {
     cam2RTC.src = cam2RTCURL;
   }
-
-  attachHLS('cam1Video', cam1HLSURL);
-  attachHLS('cam2Video', cam2HLSURL);
 }
 
 async function api(url, method, body) {
@@ -552,7 +433,6 @@ async function cam2Status() {
 
 setView('both');
 bindStreamLinks();
-setTransport('webrtc');
 cam1Status();
 cam2Status();
 </script>
@@ -562,7 +442,6 @@ cam2Status();
 		max,
 		max,
 		esc(cfg.Cam2Name),
-		esc(cfg.Cam2Device),
 		esc(cfg.Cam2CtrlDev),
 	)
 }

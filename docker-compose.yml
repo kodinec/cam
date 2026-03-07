@@ -8,7 +8,6 @@ services:
       MTX_WEBRTCLOCALTCPADDRESS: :8189
     ports:
       - "8554:8554"
-      - "8888:8888"
       - "8889:8889"
       - "8189:8189/udp"
       - "8189:8189/tcp"
@@ -16,12 +15,11 @@ services:
   cam1-publisher:
     image: jrottenberg/ffmpeg:6.1-ubuntu
     restart: unless-stopped
+    privileged: true
     depends_on:
       - mediamtx
-    devices:
-      - /dev/video0:/dev/video0
-      - /dev/video1:/dev/video1
     volumes:
+      - /dev:/dev
       - /dev/v4l/by-id:/dev/v4l/by-id:ro
     command:
       - -hide_banner
@@ -77,12 +75,11 @@ services:
   cam2-publisher:
     image: jrottenberg/ffmpeg:6.1-ubuntu
     restart: unless-stopped
+    privileged: true
     depends_on:
       - mediamtx
-    devices:
-      - /dev/video2:/dev/video2
-      - /dev/video3:/dev/video3
     volumes:
+      - /dev:/dev
       - /dev/v4l/by-id:/dev/v4l/by-id:ro
     command:
       - -hide_banner
@@ -99,17 +96,17 @@ services:
       - -f
       - v4l2
       - -input_format
-      - ${CAM2_INPUT_FORMAT:-mjpeg}
+      - ${CAM2_INPUT_FORMAT:-h264}
       - -framerate
       - ${CAM2_FPS:-25}
       - -video_size
-      - ${CAM2_RES:-1024x768}
+      - ${CAM2_RES:-1920x1080}
       - -analyzeduration
       - ${CAM2_ANALYZE_DURATION:-5M}
       - -probesize
       - ${CAM2_PROBE_SIZE:-5M}
       - -i
-      - ${CAM2_DEVICE:-/dev/video2}
+      - ${CAM2_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}
       - -an
       - -c:v
       - libx264
@@ -146,15 +143,13 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    privileged: true
     depends_on:
       - mediamtx
       - cam1-publisher
       - cam2-publisher
-    devices:
-      - ${PTZ_SERIAL:-/dev/ttyACM0}:${PTZ_SERIAL:-/dev/ttyACM0}
-      - /dev/video2:/dev/video2
-      - /dev/video3:/dev/video3
     volumes:
+      - /dev:/dev
       - /dev/v4l/by-id:/dev/v4l/by-id:ro
       - ${CAM1_MAP_FILE:-./zoom8_focusmap.json}:/app/zoom8_focusmap.json:ro
     environment:
@@ -187,14 +182,10 @@ services:
       CAM1_RELEASE_STEP_Y: ${CAM1_RELEASE_STEP_Y:-0.2}
       CAM1_RELEASE_MAX_STEPS: ${CAM1_RELEASE_MAX_STEPS:-40}
       CAM1_RELEASE_FEED: ${CAM1_RELEASE_FEED:-80}
-      CAM1_HLS_BASE: http://mediamtx:8888/cam1/
-      CAM2_HLS_BASE: http://mediamtx:8888/cam2/
       CAM1_RTC_BASE: http://mediamtx:8889/
       CAM2_RTC_BASE: http://mediamtx:8889/
-      CAM1_UPSTREAM: http://mediamtx:8888/cam1/index.m3u8
-      CAM2_UPSTREAM: http://mediamtx:8888/cam2/index.m3u8
-      CAM2_DEVICE: ${CAM2_DEVICE:-/dev/video2}
-      CAM2_CONTROL_DEVICE: ${CAM2_CONTROL_DEVICE:-/dev/video2}
+      CAM2_DEVICE: ${CAM2_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}
+      CAM2_CONTROL_DEVICE: ${CAM2_CONTROL_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}
       CAM2_ZOOM_STEP: ${CAM2_ZOOM_STEP:-1}
     ports:
       - "8787:8787"
