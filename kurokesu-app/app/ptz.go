@@ -435,7 +435,7 @@ func (p *PTZ) runStartFlow() (map[string]any, error) {
 	}
 
 	logSteps = append(logSteps, "5) HOME ZOOM ($HX)")
-	if _, err := p.commandOK("$HX"); err != nil {
+	if _, err := p.commandLoose("$HX", 3*time.Second); err != nil {
 		return nil, err
 	}
 	if _, err := p.waitForIdle(flow.HomeTimeout); err != nil {
@@ -444,7 +444,7 @@ func (p *PTZ) runStartFlow() (map[string]any, error) {
 
 	if flow.HomeFocus {
 		logSteps = append(logSteps, "6) HOME FOCUS ($HY)")
-		if _, err := p.commandOK("$HY"); err != nil {
+		if _, err := p.commandLoose("$HY", 3*time.Second); err != nil {
 			return nil, err
 		}
 		if _, err := p.waitForIdle(flow.HomeTimeout); err != nil {
@@ -844,10 +844,28 @@ func (p *PTZ) commandOK(cmd string) ([]string, error) {
 	return p.commandOKOnce(cmd)
 }
 
+func (p *PTZ) commandLoose(cmd string, wait time.Duration) ([]string, error) {
+	lines, err := p.commandLooseOnce(cmd, wait)
+	if err == nil || !isRetryableSerialErr(err) {
+		return lines, err
+	}
+	log.Printf("ptz loose command transient cmd=%q err=%v; reopening serial and retrying", cmd, err)
+	if reopenErr := p.reopenSerial(); reopenErr != nil {
+		return lines, fmt.Errorf("%w; reopen failed: %v", err, reopenErr)
+	}
+	return p.commandLooseOnce(cmd, wait)
+}
+
 func (p *PTZ) commandOKOnce(cmd string) ([]string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.sendExpectOKLocked(cmd)
+}
+
+func (p *PTZ) commandLooseOnce(cmd string, wait time.Duration) ([]string, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.sendAllowMissingOKLocked(cmd, wait)
 }
 
 func (p *PTZ) sendExpectOKLocked(cmd string) ([]string, error) {
@@ -873,6 +891,23 @@ func (p *PTZ) sendExpectOKLocked(cmd string) ([]string, error) {
 			return lines, fmt.Errorf(line)
 		}
 	}
+}
+
+func (p *PTZ) sendAllowMissingOKLocked(cmd string, wait time.Duration) ([]string, error) {
+	if err := p.writeLineLocked(cmd); err != nil {
+		return nil, err
+	}
+	if wait <= 0 {
+		wait = 250 * time.Millisecond
+	}
+	lines := p.readAvailableLocked(wait)
+	for _, line := range lines {
+		lc := strings.ToLower(line)
+		if strings.HasPrefix(lc, "error") || strings.HasPrefix(lc, "alarm") {
+			return lines, fmt.Errorf(line)
+		}
+	}
+	return lines, nil
 }
 
 func (p *PTZ) sendExpectStatusLocked(cmd string) ([]string, error) {
