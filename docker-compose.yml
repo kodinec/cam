@@ -31,7 +31,7 @@ services:
       CAM1_CRF: ${CAM1_CRF:-16}
       CAM1_GOP: ${CAM1_GOP:-25}
       CAM1_RTSP_URL: rtsp://mediamtx:8554/cam1
-    command: ["/bin/sh", "/scripts/cam1_publisher.sh"]
+    entrypoint: ["/bin/sh", "/scripts/cam1_publisher.sh"]
 
   cam2-publisher:
     image: jrottenberg/ffmpeg:6.1-ubuntu
@@ -55,7 +55,7 @@ services:
       CAM2_PROBE_SIZE: ${CAM2_PROBE_SIZE:-5M}
       CAM2_MJPEG_CRF: ${CAM2_MJPEG_CRF:-24}
       CAM2_RTSP_URL: rtsp://mediamtx:8554/cam2
-    command: ["/bin/sh", "/scripts/cam2_publisher.sh"]
+    entrypoint: ["/bin/sh", "/scripts/cam2_publisher.sh"]
 
   ptz-service:
     build:
