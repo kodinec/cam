@@ -47,6 +47,40 @@ func handleZoom(ptz *PTZ) http.HandlerFunc {
 		}
 
 		currentZoom, _ := ptz.logicalState()
+		if ptz.cam1MapMaxIndex() >= 0 {
+			nextIdx := ptz.cam1MapCurrentIndex()
+			maxIdx := ptz.cam1MapMaxIndex()
+			if set != nil {
+				if *set < 0 || *set > maxIdx {
+					writeJSON(w, http.StatusBadRequest, apiError{Error: fmt.Sprintf("set must be in range 0..%d", maxIdx)})
+					return
+				}
+				nextIdx = *set
+			}
+			if delta != nil {
+				if *delta != -1 && *delta != 1 {
+					writeJSON(w, http.StatusBadRequest, apiError{Error: "delta must be -1 or +1"})
+					return
+				}
+				nextIdx = clamp(nextIdx+*delta, 0, maxIdx)
+			}
+
+			resp, err := ptz.gotoCam1MapIndex(nextIdx)
+			if err != nil {
+				log.Printf("cam1 map zoom failed idx=%d err=%v", nextIdx, err)
+				writeJSON(w, http.StatusBadGateway, map[string]any{
+					"error":       err.Error(),
+					"logicalZoom": currentZoom,
+					"mapState":    ptz.cam1MapState(),
+				})
+				return
+			}
+			resp["logicalZoom"] = nextIdx
+			resp["mapState"] = ptz.cam1MapState()
+			writeJSON(w, http.StatusOK, resp)
+			return
+		}
+
 		nextZoom := currentZoom
 		if set != nil {
 			if *set < 0 || *set > ptz.zoomMax {
@@ -92,7 +126,7 @@ func handleZoom(ptz *PTZ) http.HandlerFunc {
 	}
 }
 
-func handleFocus(ptz *PTZ, logicalMax int) http.HandlerFunc {
+func handleFocus(ptz *PTZ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -105,6 +139,7 @@ func handleFocus(ptz *PTZ, logicalMax int) http.HandlerFunc {
 		}
 
 		_, currentFocus := ptz.logicalState()
+		logicalMax := ptz.zoomMax
 		nextFocus := currentFocus
 		if set != nil {
 			if *set < 0 || *set > logicalMax {
@@ -167,12 +202,67 @@ func handleStatus(ptz *PTZ) http.HandlerFunc {
 			return
 		}
 		zoom, focus := ptz.logicalState()
-		writeJSON(w, http.StatusOK, map[string]any{
+		resp := map[string]any{
 			"logicalZoom":  zoom,
 			"logicalFocus": focus,
 			"statusReply":  statusLine(status),
 			"statusLines":  status,
-		})
+			"mapState":     ptz.cam1MapState(),
+		}
+		st := statusLine(status)
+		if x, y, _, _, ok := parseMPos(st); ok {
+			resp["mposX"] = x
+			resp["mposY"] = y
+		}
+		if x, y, _, _, ok := parseWPos(st); ok {
+			resp["wposX"] = x
+			resp["wposY"] = y
+		}
+		lim := parseLimitAxes(st)
+		if len(lim) > 0 {
+			axes := make([]string, 0, len(lim))
+			for _, a := range []string{"X", "Y", "Z", "A", "R"} {
+				if lim[a] {
+					axes = append(axes, a)
+				}
+			}
+			resp["limits"] = strings.Join(axes, "")
+		}
+		writeJSON(w, http.StatusOK, resp)
+	}
+}
+
+func handleCam1Home(ptz *PTZ) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		resp, err := ptz.runCam1StartFlow()
+		if err != nil {
+			log.Printf("cam1 start flow failed err=%v", err)
+			writeJSON(w, http.StatusBadGateway, map[string]any{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		if ptz.cam1MapMaxIndex() >= 0 {
+			step0, err := ptz.gotoCam1MapIndex(0)
+			if err != nil {
+				writeJSON(w, http.StatusBadGateway, map[string]any{
+					"error":       err.Error(),
+					"flowResult":  resp,
+					"mapState":    ptz.cam1MapState(),
+					"afterHomeOK": true,
+				})
+				return
+			}
+			resp["step0"] = step0
+		}
+		resp["mapState"] = ptz.cam1MapState()
+		writeJSON(w, http.StatusOK, resp)
 	}
 }
 

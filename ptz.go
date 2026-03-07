@@ -11,19 +11,28 @@ import (
 )
 
 type PTZ struct {
-	mu           sync.Mutex
-	port         *serial.Port
-	serialPath   string
-	cmdTimeout   time.Duration
-	zoomMax      int
-	xPerStep     float64
-	yPerStep     float64
-	feed         float64
-	logicalZoom  int
-	logicalFocus int
+	mu               sync.Mutex
+	port             *serial.Port
+	serialPath       string
+	cmdTimeout       time.Duration
+	zoomMax          int
+	xPerStep         float64
+	yPerStep         float64
+	feed             float64
+	logicalZoom      int
+	logicalFocus     int
+	cam1Map          *Cam1Map
+	cam1MapFeed      float64
+	cam1HomeCfg      cam1HomeConfig
+	cam1CurrentIndex int
 }
 
 func newPTZ(cfg Config) (*PTZ, error) {
+	cam1Map, err := loadCam1Map(cfg.Cam1MapPath, cfg.Cam1MapSteps)
+	if err != nil {
+		return nil, fmt.Errorf("load cam1 map: %w", err)
+	}
+
 	sp, err := serial.OpenPort(&serial.Config{
 		Name:        cfg.PTZSerial,
 		Baud:        cfg.PTZBaud,
@@ -43,6 +52,29 @@ func newPTZ(cfg Config) (*PTZ, error) {
 		feed:         cfg.PTZFeed,
 		logicalZoom:  0,
 		logicalFocus: 0,
+		cam1Map:      cam1Map,
+		cam1MapFeed:  cfg.Cam1MapFeed,
+		cam1HomeCfg: cam1HomeConfig{
+			Reset:          cfg.Cam1Reset,
+			LimitLED:       cfg.Cam1LimitLED,
+			IrisOpen:       cfg.Cam1IrisOpen,
+			HomeFocus:      cfg.Cam1HomeFocus,
+			HomeTimeout:    time.Duration(cfg.Cam1HomeTimeout * float64(time.Second)),
+			BackoffX:       cfg.Cam1BackoffX,
+			BackoffY:       cfg.Cam1BackoffY,
+			BackoffFeed:    cfg.Cam1BackoffFeed,
+			StartX:         cfg.Cam1StartX,
+			StartY:         cfg.Cam1StartY,
+			GotoFeed:       cfg.Cam1GotoFeed,
+			AutoRelease:    cfg.Cam1AutoRelease,
+			ReleaseStepX:   cfg.Cam1ReleaseStepX,
+			ReleaseStepY:   cfg.Cam1ReleaseStepY,
+			ReleaseMaxStep: cfg.Cam1ReleaseMaxStep,
+			ReleaseFeed:    cfg.Cam1ReleaseFeed,
+		},
+	}
+	if cam1Map != nil && cam1Map.MaxIndex() >= 0 {
+		p.zoomMax = cam1Map.MaxIndex()
 	}
 
 	p.mu.Lock()
@@ -65,6 +97,9 @@ func newPTZ(cfg Config) (*PTZ, error) {
 	}
 
 	log.Printf("ptz ready serial=%s g90_reply=%v status=%v", cfg.PTZSerial, g90Lines, statusLines)
+	if cam1Map != nil {
+		log.Printf("cam1 map loaded path=%s points=%d coord=%s preload=%.3f feed=%.1f", cam1Map.Path, len(cam1Map.ZoomX), cam1Map.CoordSpace, cam1Map.XPreload, cfg.Cam1MapFeed)
+	}
 	return p, nil
 }
 

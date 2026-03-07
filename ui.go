@@ -240,6 +240,10 @@ func uiHTML(cfg Config) string {
         <video id="cam1Video" class="stream" muted autoplay playsinline controls></video>
       </div>
       <div class="controls">
+        <button class="danger" onclick="cam1Home()">Start Flow + Step0</button>
+        <span id="cam1MapInfo" class="small">Map: loading...</span>
+      </div>
+      <div class="controls">
         <button onclick="cam1ZoomDelta(-1)">Zoom -</button>
         <button class="accent" onclick="cam1ZoomDelta(1)">Zoom +</button>
         <label>Set</label>
@@ -379,17 +383,42 @@ async function api(url, method, body) {
   return data;
 }
 
-function cam1ZoomDelta(delta) { return api('/api/cam1/zoom', 'POST', { delta }); }
+function updateCam1State(data) {
+  if (!data) return data;
+  const state = data.mapState || (data.step0 && data.step0.mapState) || null;
+  const info = document.getElementById('cam1MapInfo');
+  const zoomSet = document.getElementById('cam1ZoomSet');
+
+  if (state && state.enabled) {
+    const idx = Number(state.currentIndex ?? data.mapIndex ?? 0);
+    const max = Number(state.maxIndex ?? 0);
+    if (zoomSet) {
+      zoomSet.max = String(max);
+      zoomSet.value = String(idx);
+    }
+    if (info) {
+      const coord = state.coordSpace || 'wpos';
+      const preload = Number(state.xPreload || 0).toFixed(3);
+      info.textContent = 'Map ON: idx=' + idx + '/' + max + ' coord=' + coord + ' preload=' + preload;
+    }
+  } else if (info) {
+    info.textContent = 'Map OFF: legacy linear mode';
+  }
+  return data;
+}
+
+function cam1Home() { return api('/api/cam1/home', 'POST', {}).then(updateCam1State); }
+function cam1ZoomDelta(delta) { return api('/api/cam1/zoom', 'POST', { delta }).then(updateCam1State); }
 function cam1ZoomSet() {
   const set = Number(document.getElementById('cam1ZoomSet').value);
-  return api('/api/cam1/zoom', 'POST', { set });
+  return api('/api/cam1/zoom', 'POST', { set }).then(updateCam1State);
 }
-function cam1FocusDelta(delta) { return api('/api/cam1/focus', 'POST', { delta }); }
+function cam1FocusDelta(delta) { return api('/api/cam1/focus', 'POST', { delta }).then(updateCam1State); }
 function cam1FocusSet() {
   const set = Number(document.getElementById('cam1FocusSet').value);
-  return api('/api/cam1/focus', 'POST', { set });
+  return api('/api/cam1/focus', 'POST', { set }).then(updateCam1State);
 }
-function cam1Status() { return api('/api/cam1/status', 'GET'); }
+function cam1Status() { return api('/api/cam1/status', 'GET').then(updateCam1State); }
 
 function cam2ZoomDelta(delta) { return api('/api/cam2/zoom', 'POST', { delta }); }
 function cam2ZoomSet() {

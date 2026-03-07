@@ -109,6 +109,7 @@ services:
       - /dev/video3:/dev/video3
     volumes:
       - /dev/v4l/by-id:/dev/v4l/by-id:ro
+      - ${CAM1_MAP_FILE:-./zoom8_focusmap.json}:/app/zoom8_focusmap.json:ro
     environment:
       LISTEN: ":8787"
       PTZ_USER: ${PTZ_USER:-admin}
@@ -120,6 +121,25 @@ services:
       PTZ_Y_PER_STEP: ${PTZ_Y_PER_STEP:-10.0}
       PTZ_FEED: ${PTZ_FEED:-200}
       PTZ_ALLOW_RAW: ${PTZ_ALLOW_RAW:-false}
+      CAM1_MAP_PATH: ${CAM1_MAP_PATH:-/app/zoom8_focusmap.json}
+      CAM1_MAP_STEPS: ${CAM1_MAP_STEPS:-8}
+      CAM1_MAP_FEED: ${CAM1_MAP_FEED:-180}
+      CAM1_RESET: ${CAM1_RESET:-true}
+      CAM1_LIMIT_LED: ${CAM1_LIMIT_LED:-true}
+      CAM1_IRIS_OPEN: ${CAM1_IRIS_OPEN:-true}
+      CAM1_HOME_FOCUS: ${CAM1_HOME_FOCUS:-true}
+      CAM1_HOME_TIMEOUT: ${CAM1_HOME_TIMEOUT:-25}
+      CAM1_BACKOFF_X: ${CAM1_BACKOFF_X:-1.0}
+      CAM1_BACKOFF_Y: ${CAM1_BACKOFF_Y:-0.5}
+      CAM1_BACKOFF_FEED: ${CAM1_BACKOFF_FEED:-120}
+      CAM1_START_X: ${CAM1_START_X:-0.0}
+      CAM1_START_Y: ${CAM1_START_Y:-0.0}
+      CAM1_GOTO_FEED: ${CAM1_GOTO_FEED:-200}
+      CAM1_AUTO_RELEASE: ${CAM1_AUTO_RELEASE:-true}
+      CAM1_RELEASE_STEP_X: ${CAM1_RELEASE_STEP_X:-0.2}
+      CAM1_RELEASE_STEP_Y: ${CAM1_RELEASE_STEP_Y:-0.2}
+      CAM1_RELEASE_MAX_STEPS: ${CAM1_RELEASE_MAX_STEPS:-40}
+      CAM1_RELEASE_FEED: ${CAM1_RELEASE_FEED:-80}
       CAM1_HLS_BASE: http://mediamtx:8888/cam1/
       CAM2_HLS_BASE: http://mediamtx:8888/cam2/
       CAM1_UPSTREAM: http://mediamtx:8888/cam1/index.m3u8
