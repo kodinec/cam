@@ -79,23 +79,10 @@ func newPTZ(cfg Config) (*PTZ, error) {
 		p.zoomMax = cam1Map.MaxIndex()
 	}
 
-	p.mu.Lock()
-	startupLines := p.readAvailableLocked(600 * time.Millisecond)
-	if len(startupLines) > 0 {
-		log.Printf("ptz startup lines: %v", startupLines)
-	}
-
-	g90Lines, err := p.sendExpectOKLocked("G90")
-	if err != nil {
-		p.mu.Unlock()
-		_ = sp.Close()
-		return nil, fmt.Errorf("startup G90 failed: %w (reply=%v)", err, g90Lines)
-	}
-	statusLines, err := p.sendExpectStatusLocked("?")
-	p.mu.Unlock()
+	g90Lines, statusLines, err := p.startupHandshake(5)
 	if err != nil {
 		_ = sp.Close()
-		return nil, fmt.Errorf("startup status failed: %w (reply=%v)", err, statusLines)
+		return nil, fmt.Errorf("startup handshake failed: %w", err)
 	}
 
 	log.Printf("ptz ready serial=%s g90_reply=%v status=%v", cfg.PTZSerial, g90Lines, statusLines)
@@ -114,6 +101,55 @@ func (p *PTZ) Close() error {
 	err := p.port.Close()
 	p.port = nil
 	return err
+}
+
+func (p *PTZ) startupHandshake(maxAttempts int) (g90Lines []string, statusLines []string, err error) {
+	if maxAttempts < 1 {
+		maxAttempts = 1
+	}
+
+	var lastErr error
+	gotG90 := false
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		p.mu.Lock()
+		startupLines := p.readAvailableLocked(450 * time.Millisecond)
+		p.mu.Unlock()
+		if len(startupLines) > 0 {
+			log.Printf("ptz startup banner attempt=%d lines=%v", attempt, startupLines)
+		}
+
+		g90Lines, err = p.commandOK("G90")
+		if err != nil {
+			lastErr = fmt.Errorf("G90 attempt %d: %w (reply=%v)", attempt, err, g90Lines)
+			log.Printf("ptz startup: %v", lastErr)
+			if attempt < maxAttempts {
+				_ = p.reopenSerial()
+				time.Sleep(250 * time.Millisecond)
+			}
+			continue
+		}
+		gotG90 = true
+
+		statusLines, err = p.queryStatus()
+		if err == nil {
+			return g90Lines, statusLines, nil
+		}
+
+		lastErr = fmt.Errorf("status ? attempt %d: %w (reply=%v)", attempt, err, statusLines)
+		log.Printf("ptz startup: %v", lastErr)
+		if attempt < maxAttempts {
+			_ = p.reopenSerial()
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
+
+	// Some controllers can transiently drop '?' right after boot/reset but still accept motion commands.
+	// If G90 succeeded, allow service startup and defer status parsing to runtime calls.
+	if gotG90 {
+		log.Printf("ptz startup: proceeding without initial status after retries; last_err=%v", lastErr)
+		return g90Lines, statusLines, nil
+	}
+	return g90Lines, statusLines, lastErr
 }
 
 func (p *PTZ) logicalState() (zoom int, focus int) {
