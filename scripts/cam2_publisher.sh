@@ -22,32 +22,28 @@ MJPEG_X264_PARAMS="${CAM2_MJPEG_X264_PARAMS:-bframes=0:rc-lookahead=0:sync-looka
 run_h264() {
   dev="$1"
   ffmpeg -hide_banner -loglevel warning \
-    -fflags +nobuffer+discardcorrupt+genpts -flags low_delay -use_wallclock_as_timestamps 1 \
-    -avioflags direct \
+    -fflags nobuffer -flags low_delay \
     -thread_queue_size "${THREAD_QUEUE}" \
     -f v4l2 -input_format h264 -framerate "${H264_FPS}" -video_size "${H264_RES}" \
     -i "${dev}" \
-    -an -c:v copy -fps_mode passthrough \
+    -an -c:v copy \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
 
 run_mjpeg() {
   dev="$1"
   ffmpeg -hide_banner -loglevel warning \
-    -fflags +nobuffer+discardcorrupt+genpts -flags low_delay -use_wallclock_as_timestamps 1 \
-    -avioflags direct \
+    -fflags nobuffer -flags low_delay \
     -thread_queue_size "${THREAD_QUEUE}" \
     -f v4l2 -input_format mjpeg -framerate "${MJPEG_FPS}" -video_size "${MJPEG_RES}" \
     -analyzeduration "${ANALYZE}" -probesize "${PROBE}" \
     -i "${dev}" \
     -an \
-    -vf "scale=in_range=pc:out_range=tv,format=yuv420p,settb=AVTB,setpts=N/(${MJPEG_FPS}*TB)" \
+    -vf "format=yuv420p" \
     -c:v libx264 -preset ultrafast -crf "${MJPEG_CRF}" -tune zerolatency \
     -bf 0 -pix_fmt yuv420p -b:v "${MJPEG_BITRATE}" -maxrate "${MJPEG_BITRATE}" -bufsize "${MJPEG_BUFSIZE}" \
     -x264-params "${MJPEG_X264_PARAMS}" \
     -g "${GOP}" -keyint_min "${GOP}" -sc_threshold 0 \
-    -fps_mode cfr -r "${MJPEG_FPS}" \
-    -flush_packets 1 -max_delay 0 -muxdelay 0.0 -muxpreload 0.0 \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
 
@@ -58,11 +54,9 @@ resolve_device() {
   fi
 
   for p in \
+    /dev/v4l/by-id/usb-rockchip_UVC_*-video-index0 \
     /dev/v4l/by-id/*rockchip*UVC*index0 \
-    /dev/v4l/by-id/*UVC*index0 \
-    /dev/video2 \
-    /dev/video4 \
-    /dev/video6
+    /dev/v4l/by-id/*UVC*index0
   do
     if [ -e "$p" ]; then
       echo "$p"

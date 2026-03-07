@@ -17,38 +17,32 @@ X264_PARAMS="${CAM1_X264_PARAMS:-bframes=0:rc-lookahead=0:sync-lookahead=0:scene
 run_mjpeg() {
   dev="$1"
   ffmpeg -hide_banner -loglevel warning \
-    -fflags +nobuffer+discardcorrupt+genpts -flags low_delay -use_wallclock_as_timestamps 1 \
-    -avioflags direct \
+    -fflags nobuffer -flags low_delay \
     -thread_queue_size "${THREAD_QUEUE}" \
     -f v4l2 -input_format mjpeg -framerate "${FPS}" -video_size "${RES}" \
     -i "${dev}" \
     -an \
-    -vf "scale=in_range=pc:out_range=tv,format=yuv420p,settb=AVTB,setpts=N/(${FPS}*TB)" \
+    -vf "format=yuv420p" \
     -c:v libx264 -preset "${PRESET}" -crf "${CRF}" -tune zerolatency \
     -bf 0 -pix_fmt yuv420p -b:v "${BITRATE}" -maxrate "${BITRATE}" -bufsize "${BUFSIZE}" \
     -x264-params "${X264_PARAMS}" \
     -g "${GOP}" -keyint_min "${GOP}" -sc_threshold 0 \
-    -fps_mode cfr -r "${FPS}" \
-    -flush_packets 1 -max_delay 0 -muxdelay 0.0 -muxpreload 0.0 \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
 
 run_yuyv() {
   dev="$1"
   ffmpeg -hide_banner -loglevel warning \
-    -fflags +nobuffer+discardcorrupt+genpts -flags low_delay -use_wallclock_as_timestamps 1 \
-    -avioflags direct \
+    -fflags nobuffer -flags low_delay \
     -thread_queue_size "${THREAD_QUEUE}" \
     -f v4l2 -input_format yuyv422 -framerate "${FPS}" -video_size "${RES}" \
     -i "${dev}" \
     -an \
-    -vf "format=yuv420p,settb=AVTB,setpts=N/(${FPS}*TB)" \
+    -vf "format=yuv420p" \
     -c:v libx264 -preset "${PRESET}" -crf "${CRF}" -tune zerolatency \
     -bf 0 -pix_fmt yuv420p -b:v "${BITRATE}" -maxrate "${BITRATE}" -bufsize "${BUFSIZE}" \
     -x264-params "${X264_PARAMS}" \
     -g "${GOP}" -keyint_min "${GOP}" -sc_threshold 0 \
-    -fps_mode cfr -r "${FPS}" \
-    -flush_packets 1 -max_delay 0 -muxdelay 0.0 -muxpreload 0.0 \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
 
@@ -61,9 +55,9 @@ resolve_device() {
   fi
 
   for p in \
+    /dev/v4l/by-id/usb-Kurokesu_C3_4K_*-video-index0 \
     /dev/v4l/by-id/*Kurokesu*C3*video-index0 \
-    /dev/v4l/by-id/*Kurokesu*video-index0 \
-    /dev/video0
+    /dev/v4l/by-id/*Kurokesu*video-index0
   do
     if [ -e "$p" ]; then
       echo "$p"
