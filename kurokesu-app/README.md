@@ -38,12 +38,15 @@ UI:
 ## Main env vars
 
 - `PTZ_SERIAL`
+- `PTZ_SERIAL_FALLBACK`
 - `PTZ_BAUD`
 - `CAM1_DEVICE`
 - `CAM_MAP_STEPS` default `8`
 - `CAM_STRICT_MAP_LIMITS` default `true`
 - `APP_USER`
 - `APP_PASS`
+
+For the controller, prefer a stable `/dev/serial/by-id/...` path when available.
 
 ## Runtime behavior
 

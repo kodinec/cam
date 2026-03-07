@@ -17,26 +17,27 @@ type Config struct {
 	MapSteps        int
 	StrictMapLimits bool
 
-	PTZSerial       string
-	PTZBaud         int
-	MapFeed         float64
-	FocusFineStep   float64
-	Reset           bool
-	LimitLED        bool
-	IrisOpen        bool
-	HomeFocus       bool
-	HomeTimeout     float64
-	BackoffX        float64
-	BackoffY        float64
-	BackoffFeed     float64
-	StartX          float64
-	StartY          float64
-	GotoFeed        float64
-	AutoRelease     bool
-	ReleaseStepX    float64
-	ReleaseStepY    float64
-	ReleaseMaxSteps int
-	ReleaseFeed     float64
+	PTZSerial         string
+	PTZSerialFallback string
+	PTZBaud           int
+	MapFeed           float64
+	FocusFineStep     float64
+	Reset             bool
+	LimitLED          bool
+	IrisOpen          bool
+	HomeFocus         bool
+	HomeTimeout       float64
+	BackoffX          float64
+	BackoffY          float64
+	BackoffFeed       float64
+	StartX            float64
+	StartY            float64
+	GotoFeed          float64
+	AutoRelease       bool
+	ReleaseStepX      float64
+	ReleaseStepY      float64
+	ReleaseMaxSteps   int
+	ReleaseFeed       float64
 }
 
 func loadConfig() Config {
@@ -51,6 +52,7 @@ func loadConfig() Config {
 	flag.BoolVar(&cfg.StrictMapLimits, "strict-map-limits", envBool("CAM_STRICT_MAP_LIMITS", true), "reject selected map points flagged with limitXY")
 
 	flag.StringVar(&cfg.PTZSerial, "ptz-serial", envString("PTZ_SERIAL", "/dev/ttyACM0"), "PTZ serial device")
+	flag.StringVar(&cfg.PTZSerialFallback, "ptz-serial-fallback", envString("PTZ_SERIAL_FALLBACK", "/dev/serial/by-id/"), "fallback PTZ serial device path")
 	flag.IntVar(&cfg.PTZBaud, "ptz-baud", envInt("PTZ_BAUD", 115200), "PTZ serial baud")
 	flag.Float64Var(&cfg.MapFeed, "map-feed", envFloat("CAM_MAP_FEED", 180.0), "map move feed")
 	flag.Float64Var(&cfg.FocusFineStep, "focus-fine-step", envFloat("CAM_FOCUS_FINE_STEP", 0.05), "manual focus fine step")

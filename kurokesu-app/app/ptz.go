@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -58,18 +59,19 @@ func newPTZ(cfg Config) (*PTZ, error) {
 		return nil, fmt.Errorf("load zoom map: %w", err)
 	}
 
+	serialPath := resolveSerialPath(cfg.PTZSerial, cfg.PTZSerialFallback)
 	sp, err := serial.OpenPort(&serial.Config{
-		Name:        cfg.PTZSerial,
+		Name:        serialPath,
 		Baud:        cfg.PTZBaud,
 		ReadTimeout: 120 * time.Millisecond,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("open serial %s: %w", cfg.PTZSerial, err)
+		return nil, fmt.Errorf("open serial %s: %w", serialPath, err)
 	}
 
 	p := &PTZ{
 		port:          sp,
-		serialPath:    cfg.PTZSerial,
+		serialPath:    serialPath,
 		serialBaud:    cfg.PTZBaud,
 		cmdTimeout:    3 * time.Second,
 		zoomMap:       zoomMap,
@@ -95,14 +97,19 @@ func newPTZ(cfg Config) (*PTZ, error) {
 		},
 	}
 
+	if err := p.wakeSerial(); err != nil {
+		_ = sp.Close()
+		return nil, fmt.Errorf("wake serial %s: %w", serialPath, err)
+	}
+
 	g90Lines, statusLines, err := p.startupHandshake(5)
 	if err != nil {
 		_ = sp.Close()
 		return nil, fmt.Errorf("startup handshake failed: %w", err)
 	}
 	log.Printf(
-		"ptz ready serial=%s g90_reply=%v status=%v map_points=%d source_points=%d selected_flags=%v source_flags=%v",
-		cfg.PTZSerial, g90Lines, statusLines, len(zoomMap.ZoomX), zoomMap.SourcePoints, zoomMap.SelectedFlagged, zoomMap.SourceFlaggedIndices,
+		"ptz ready serial=%s requested_serial=%s fallback_serial=%s g90_reply=%v status=%v map_points=%d source_points=%d selected_flags=%v source_flags=%v",
+		serialPath, cfg.PTZSerial, cfg.PTZSerialFallback, g90Lines, statusLines, len(zoomMap.ZoomX), zoomMap.SourcePoints, zoomMap.SelectedFlagged, zoomMap.SourceFlaggedIndices,
 	)
 	return p, nil
 }
@@ -753,10 +760,27 @@ func (p *PTZ) reopenSerial() error {
 		return err
 	}
 	p.port = sp
-	_, _ = p.port.Write([]byte("\r\n\r\n"))
-	time.Sleep(200 * time.Millisecond)
-	_ = p.readAvailableLocked(500 * time.Millisecond)
+	p.primeSerialLocked()
 	return nil
+}
+
+func (p *PTZ) wakeSerial() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.port == nil {
+		return fmt.Errorf("serial port closed")
+	}
+	p.primeSerialLocked()
+	return nil
+}
+
+func (p *PTZ) primeSerialLocked() {
+	if p.port == nil {
+		return
+	}
+	_, _ = p.port.Write([]byte("\r\n\r\n"))
+	time.Sleep(350 * time.Millisecond)
+	_ = p.readAvailableLocked(650 * time.Millisecond)
 }
 
 func (p *PTZ) queryStatus() ([]string, error) {
@@ -939,4 +963,47 @@ func statusLine(lines []string) string {
 		return ""
 	}
 	return lines[len(lines)-1]
+}
+
+func resolveSerialPath(primary, fallback string) string {
+	primary = strings.TrimSpace(primary)
+	fallback = strings.TrimSpace(fallback)
+	if pathExists(primary) {
+		return primary
+	}
+	if fallback != "" && fallback != primary && fallback != "/dev/serial/by-id/" && pathExists(fallback) {
+		return fallback
+	}
+	if fallback == "/dev/serial/by-id/" {
+		if match := firstExistingSerialByID(); match != "" {
+			return match
+		}
+	}
+	return primary
+}
+
+func pathExists(path string) bool {
+	if strings.TrimSpace(path) == "" {
+		return false
+	}
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func firstExistingSerialByID() string {
+	const dir = "/dev/serial/by-id"
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		path := dir + "/" + entry.Name()
+		if pathExists(path) {
+			return path
+		}
+	}
+	return ""
 }

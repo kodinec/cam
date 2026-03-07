@@ -56,6 +56,7 @@ services:
       CAM_MAP_FEED: ${CAM_MAP_FEED:-180}
       CAM_FOCUS_FINE_STEP: ${CAM_FOCUS_FINE_STEP:-0.05}
       PTZ_SERIAL: ${PTZ_SERIAL:-/dev/ttyACM0}
+      PTZ_SERIAL_FALLBACK: ${PTZ_SERIAL_FALLBACK:-/dev/serial/by-id/}
       PTZ_BAUD: ${PTZ_BAUD:-115200}
       CAM_RESET: ${CAM_RESET:-true}
       CAM_LIMIT_LED: ${CAM_LIMIT_LED:-true}
