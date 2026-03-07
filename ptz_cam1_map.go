@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/tarm/serial"
 )
 
 var (
@@ -408,17 +410,9 @@ func (p *PTZ) runCam1StartFlow() (map[string]any, error) {
 
 	if flow.Reset {
 		logSteps = append(logSteps, "1) RESET")
-		p.mu.Lock()
-		if p.port == nil {
-			p.mu.Unlock()
-			return nil, errors.New("serial port closed")
+		if err := p.ctrlXResetAndReconnect(1 * time.Second); err != nil {
+			return nil, err
 		}
-		if _, err := p.port.Write([]byte{0x18}); err != nil {
-			p.mu.Unlock()
-			return nil, fmt.Errorf("ctrl-x reset failed: %w", err)
-		}
-		p.mu.Unlock()
-		time.Sleep(1 * time.Second)
 	} else {
 		logSteps = append(logSteps, "1) RESET skipped")
 	}
@@ -510,6 +504,53 @@ func (p *PTZ) runCam1StartFlow() (map[string]any, error) {
 		"statusLines": statusLines,
 	}
 	return resp, nil
+}
+
+func (p *PTZ) ctrlXResetAndReconnect(wait time.Duration) error {
+	p.mu.Lock()
+	if p.port == nil {
+		p.mu.Unlock()
+		return errors.New("serial port closed")
+	}
+	if _, err := p.port.Write([]byte{0x18}); err != nil {
+		p.mu.Unlock()
+		return fmt.Errorf("ctrl-x reset write failed: %w", err)
+	}
+	p.mu.Unlock()
+
+	time.Sleep(wait)
+
+	// GRBL-based controllers can drop the serial endpoint after Ctrl-X.
+	// Re-open the port to avoid EOF on first command after reset.
+	if err := p.reopenSerial(); err != nil {
+		return fmt.Errorf("reopen serial after reset failed: %w", err)
+	}
+	return nil
+}
+
+func (p *PTZ) reopenSerial() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.port != nil {
+		_ = p.port.Close()
+		p.port = nil
+	}
+
+	sp, err := serial.OpenPort(&serial.Config{
+		Name:        p.serialPath,
+		Baud:        p.serialBaud,
+		ReadTimeout: 120 * time.Millisecond,
+	})
+	if err != nil {
+		return err
+	}
+	p.port = sp
+
+	_, _ = p.port.Write([]byte("\r\n\r\n"))
+	time.Sleep(200 * time.Millisecond)
+	_ = p.readAvailableLocked(500 * time.Millisecond)
+	return nil
 }
 
 func (p *PTZ) autoReleaseCam1Limits(stepX, stepY float64, maxSteps int, feed float64) error {

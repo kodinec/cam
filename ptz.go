@@ -14,6 +14,7 @@ type PTZ struct {
 	mu               sync.Mutex
 	port             *serial.Port
 	serialPath       string
+	serialBaud       int
 	cmdTimeout       time.Duration
 	zoomMax          int
 	xPerStep         float64
@@ -45,6 +46,7 @@ func newPTZ(cfg Config) (*PTZ, error) {
 	p := &PTZ{
 		port:         sp,
 		serialPath:   cfg.PTZSerial,
+		serialBaud:   cfg.PTZBaud,
 		cmdTimeout:   3 * time.Second,
 		zoomMax:      cfg.PTZZoomMax,
 		xPerStep:     cfg.PTZXPerStep,
