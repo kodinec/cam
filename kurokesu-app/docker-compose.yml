@@ -12,7 +12,10 @@ services:
       - "${MTX_WEBRTC_ICE_PORT}:8189/tcp"
 
   cam1-publisher:
-    image: jrottenberg/ffmpeg:6.1-ubuntu
+    build:
+      context: ./cam1-publisher
+      dockerfile: Dockerfile
+    image: kurokesu-app-cam1-publisher
     restart: unless-stopped
     privileged: true
     depends_on:

@@ -7,6 +7,8 @@ FPS="${CAM1_FPS:-25}"
 RES="${CAM1_RES:-1920x1080}"
 THREAD_QUEUE="${CAM1_THREAD_QUEUE:-64}"
 ENCODER="${CAM1_ENCODER:-libx264}"
+VAAPI_FALLBACK="${CAM1_VAAPI_FALLBACK:-true}"
+VAAPI_DRIVER="${CAM1_VAAPI_DRIVER:-}"
 PRESET="${CAM1_X264_PRESET:-superfast}"
 TUNE="${CAM1_X264_TUNE:-zerolatency}"
 PROFILE="${CAM1_X264_PROFILE:-high}"
@@ -19,6 +21,10 @@ BITRATE="${CAM1_BITRATE:-20M}"
 BUFSIZE="${CAM1_BUFSIZE:-40M}"
 RTBUF_SIZE="${CAM1_RTBUF_SIZE:-64M}"
 X264_PARAMS="${CAM1_X264_PARAMS:-bframes=0:rc-lookahead=0:sync-lookahead=0:scenecut=0}"
+
+if [ -n "${VAAPI_DRIVER}" ]; then
+  export LIBVA_DRIVER_NAME="${VAAPI_DRIVER}"
+fi
 
 cpu_encoder_args() {
   args="
@@ -119,7 +125,14 @@ run_mjpeg() {
   dev="$1"
   case "${ENCODER}" in
     h264_vaapi)
-      run_mjpeg_vaapi "${dev}"
+      if ! run_mjpeg_vaapi "${dev}"; then
+        if [ "${VAAPI_FALLBACK}" = "true" ]; then
+          echo "cam1 vaapi init failed, fallback to libx264"
+          run_mjpeg_cpu "${dev}"
+        else
+          return 1
+        fi
+      fi
       ;;
     *)
       run_mjpeg_cpu "${dev}"
@@ -131,7 +144,14 @@ run_yuyv() {
   dev="$1"
   case "${ENCODER}" in
     h264_vaapi)
-      run_yuyv_vaapi "${dev}"
+      if ! run_yuyv_vaapi "${dev}"; then
+        if [ "${VAAPI_FALLBACK}" = "true" ]; then
+          echo "cam1 vaapi init failed, fallback to libx264"
+          run_yuyv_cpu "${dev}"
+        else
+          return 1
+        fi
+      fi
       ;;
     *)
       run_yuyv_cpu "${dev}"
@@ -158,7 +178,23 @@ resolve_device() {
   return 0
 }
 
+probe_vaapi() {
+  if [ "${ENCODER}" != "h264_vaapi" ]; then
+    return 0
+  fi
+  if ! command -v vainfo >/dev/null 2>&1; then
+    return 0
+  fi
+  if vainfo --display drm --device "${VAAPI_DEVICE}" >/dev/null 2>&1; then
+    echo "cam1 vaapi probe ok device=${VAAPI_DEVICE}${VAAPI_DRIVER:+ driver=${VAAPI_DRIVER}}"
+    return 0
+  fi
+  echo "cam1 vaapi probe failed device=${VAAPI_DEVICE}${VAAPI_DRIVER:+ driver=${VAAPI_DRIVER}}; ffmpeg will try and may fallback"
+  return 0
+}
+
 echo "cam1 publisher start device=${DEVICE} mode=${MODE} encoder=${ENCODER} res=${RES} fps=${FPS} gop=${GOP} bitrate=${BITRATE:-crf-only} bufsize=${BUFSIZE:-none}"
+probe_vaapi
 
 while true; do
   ACTIVE_DEVICE="$(resolve_device)"

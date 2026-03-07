@@ -24,11 +24,15 @@ If the host has Intel iGPU exposed as `/dev/dri/renderD128`, you can switch the 
 
 ```dotenv
 CAM1_ENCODER=h264_vaapi
+CAM1_VAAPI_FALLBACK=true
 CAM1_VAAPI_DEVICE=/dev/dri/renderD128
+CAM1_VAAPI_DRIVER=iHD
 CAM1_VAAPI_QP=18
 ```
 
 This moves H.264 encoding off CPU. Intel hardware is not used automatically just because the host CPU is Intel.
+`cam1-publisher` now builds its own image with `ffmpeg + libva + Intel VAAPI drivers`, which is required for the container to use `/dev/dri`.
+If `iHD` does not work on an older Intel GPU, try `CAM1_VAAPI_DRIVER=i965`.
 
 ## Why 8 steps
 
@@ -78,11 +82,31 @@ PTZ_SERIAL_FALLBACK=/dev/serial/by-id/
 WEBRTC_ADDITIONAL_HOSTS=10.10.45.39
 ```
 
+If you want to force Intel VAAPI by default, keep:
+
+```dotenv
+CAM1_MODE=mjpeg
+CAM1_ENCODER=h264_vaapi
+CAM1_VAAPI_DRIVER=iHD
+```
+
+If `iHD` does not initialize on your host, switch to:
+
+```dotenv
+CAM1_VAAPI_DRIVER=i965
+```
+
 If you want to stay on the CPU path, keep:
 
 ```dotenv
 CAM1_MODE=mjpeg
 CAM1_ENCODER=libx264
+```
+
+If you want to validate Intel offload inside the same container image, run:
+
+```bash
+docker compose exec cam1-publisher vainfo --display drm --device /dev/dri/renderD128
 ```
 
 ## Runtime behavior
