@@ -45,7 +45,9 @@ services:
       - -c:v
       - libx264
       - -preset
-      - ultrafast
+      - ${CAM1_X264_PRESET:-veryfast}
+      - -crf
+      - ${CAM1_CRF:-18}
       - -tune
       - zerolatency
       - -bf

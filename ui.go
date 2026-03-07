@@ -36,7 +36,7 @@ func uiHTML(cfg Config) string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Dual Camera Console v.001</title>
+  <title>cam helper v.001</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
@@ -222,14 +222,13 @@ func uiHTML(cfg Config) string {
 <div class="wrap">
   <header class="head">
     <div class="title">
-      <h1>Dual Camera Control Panel</h1>
+      <h1>cam helper</h1>
       <span class="ver">v.001</span>
     </div>
     <nav class="modes">
       <button id="mode-both" class="mode active" onclick="setView('both')">Both</button>
       <button id="mode-cam1" class="mode" onclick="setView('cam1')">Camera 1</button>
       <button id="mode-cam2" class="mode" onclick="setView('cam2')">Camera 2</button>
-      <span class="mode active">WebRTC</span>
     </nav>
   </header>
 
@@ -237,7 +236,7 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam1" class="panel">
       <div class="panel-head">
         <h2>Camera 1: %s</h2>
-        <span class="small">RTC: <a id="cam1RtcLink" href="/cam1/rtc/cam1" target="_blank" rel="noopener">/cam1/rtc/cam1</a></span>
+        <span class="small">Stream: <a id="cam1RtcLink" href="/cam1/rtc/cam1" target="_blank" rel="noopener">/cam1/rtc/cam1</a></span>
       </div>
       <div class="stream-wrap">
         <iframe id="cam1Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture"></iframe>
@@ -266,7 +265,7 @@ func uiHTML(cfg Config) string {
     <section id="panel-cam2" class="panel">
       <div class="panel-head">
         <h2>Camera 2: %s</h2>
-        <span class="small">RTC: <a id="cam2RtcLink" href="/cam2/rtc/cam2" target="_blank" rel="noopener">/cam2/rtc/cam2</a></span>
+        <span class="small">Stream: <a id="cam2RtcLink" href="/cam2/rtc/cam2" target="_blank" rel="noopener">/cam2/rtc/cam2</a></span>
       </div>
       <div class="stream-wrap">
         <iframe id="cam2Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture"></iframe>
