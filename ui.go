@@ -422,15 +422,22 @@ function absoluteURL(path) {
   return new URL(path, window.location.origin).toString();
 }
 
+function mediaMTXWebRTCURL(streamName) {
+  const u = new URL(window.location.href);
+  u.port = '8889';
+  u.pathname = '/' + streamName;
+  u.search = 'controls=false&autoplay=true&muted=true&playsinline=true';
+  u.hash = '';
+  return u.toString();
+}
+
 function bindStreamLinks() {
   const cam1HLSPath = '/cam1/hls/index.m3u8';
   const cam2HLSPath = '/cam2/hls/index.m3u8';
-  const cam1RTCPath = '/cam1/rtc/cam1?controls=false&autoplay=true&muted=true&playsinline=true';
-  const cam2RTCPath = '/cam2/rtc/cam2?controls=false&autoplay=true&muted=true&playsinline=true';
   const cam1HLSURL = absoluteURL(cam1HLSPath);
   const cam2HLSURL = absoluteURL(cam2HLSPath);
-  const cam1RTCURL = absoluteURL(cam1RTCPath);
-  const cam2RTCURL = absoluteURL(cam2RTCPath);
+  const cam1RTCURL = mediaMTXWebRTCURL('cam1');
+  const cam2RTCURL = mediaMTXWebRTCURL('cam2');
 
   const cam1RTCLink = document.getElementById('cam1RtcLink');
   if (cam1RTCLink) {
