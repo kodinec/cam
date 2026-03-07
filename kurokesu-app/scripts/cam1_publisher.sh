@@ -2,20 +2,20 @@
 set -eu
 
 DEVICE="${CAM1_DEVICE:-/dev/v4l/by-id/usb-Kurokesu_C3_4K_00001-video-index0}"
-MODE="${CAM1_MODE:-auto}"
+MODE="${CAM1_MODE:-mjpeg}"
 FPS="${CAM1_FPS:-25}"
 RES="${CAM1_RES:-1920x1080}"
 THREAD_QUEUE="${CAM1_THREAD_QUEUE:-64}"
-PRESET="${CAM1_X264_PRESET:-veryfast}"
+PRESET="${CAM1_X264_PRESET:-superfast}"
 TUNE="${CAM1_X264_TUNE:-zerolatency}"
 PROFILE="${CAM1_X264_PROFILE:-high}"
-CRF="${CAM1_CRF:-12}"
+CRF="${CAM1_CRF:-13}"
 GOP="${CAM1_GOP:-15}"
 RTSP_URL="${CAM1_RTSP_URL:-rtsp://mediamtx:8554/cam1}"
-BITRATE="${CAM1_BITRATE:-25M}"
-BUFSIZE="${CAM1_BUFSIZE:-50M}"
-RTBUF_SIZE="${CAM1_RTBUF_SIZE:-128M}"
-X264_PARAMS="${CAM1_X264_PARAMS:-bframes=0:scenecut=0}"
+BITRATE="${CAM1_BITRATE:-20M}"
+BUFSIZE="${CAM1_BUFSIZE:-40M}"
+RTBUF_SIZE="${CAM1_RTBUF_SIZE:-64M}"
+X264_PARAMS="${CAM1_X264_PARAMS:-bframes=0:rc-lookahead=0:sync-lookahead=0:scenecut=0}"
 
 encoder_args() {
   args="
@@ -103,7 +103,7 @@ while true; do
   elif [ "${MODE}" = "yuyv" ]; then
     run_yuyv "${ACTIVE_DEVICE}" || true
   else
-    run_yuyv "${ACTIVE_DEVICE}" || run_mjpeg "${ACTIVE_DEVICE}" || true
+    run_mjpeg "${ACTIVE_DEVICE}" || run_yuyv "${ACTIVE_DEVICE}" || true
   fi
 
   echo "cam1 ffmpeg restarted in 1s"
