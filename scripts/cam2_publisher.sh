@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-DEVICE="${CAM2_DEVICE:-/dev/video2}"
+DEVICE="${CAM2_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}"
 MODE="${CAM2_MODE:-auto}"
 THREAD_QUEUE="${CAM2_THREAD_QUEUE:-256}"
 RTSP_URL="${CAM2_RTSP_URL:-rtsp://mediamtx:8554/cam2}"
@@ -61,4 +61,3 @@ while true; do
   echo "cam2 ffmpeg restarted in 1s"
   sleep 1
 done
-

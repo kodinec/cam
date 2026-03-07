@@ -404,6 +404,35 @@ func handleRaw(ptz *PTZ, allowRaw bool) http.HandlerFunc {
 	}
 }
 
+func handleCam1UnavailableStatus(reason string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"available": false,
+			"error":     "cam1 ptz unavailable: " + reason,
+			"mapState": map[string]any{
+				"enabled": false,
+				"homed":   false,
+			},
+		})
+	}
+}
+
+func handleCam1UnavailableControl(method string, reason string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != method {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{
+			"error": "cam1 ptz unavailable: " + reason,
+		})
+	}
+}
+
 func handleCam2Zoom(cam2 *Cam2Zoom) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

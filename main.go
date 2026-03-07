@@ -13,20 +13,32 @@ func main() {
 		cfg.Listen, cfg.Cam1RTCBase, cfg.Cam2RTCBase, cfg.Cam1MapPath, cfg.Cam1MapSteps, cfg.Cam2Device, cfg.Cam2CtrlDev, cfg.Cam2ZoomStep, cfg.PTZSerial, cfg.PTZBaud, cfg.PTZZoomMax, cfg.PTZXPerStep, cfg.PTZYPerStep, cfg.PTZFeed, cfg.PTZAllowRaw,
 	)
 
-	ptz, err := newPTZ(cfg)
-	if err != nil {
-		log.Fatalf("ptz init failed: %v", err)
+	var ptz *PTZ
+	var ptzInitErr error
+	ptz, ptzInitErr = newPTZ(cfg)
+	if ptzInitErr != nil {
+		log.Printf("ptz init failed (service will run in degraded mode): %v", ptzInitErr)
+	} else {
+		defer ptz.Close()
 	}
-	defer ptz.Close()
 	cam2Zoom := newCam2Zoom(cfg)
 
 	private := http.NewServeMux()
 	private.HandleFunc("/", serveUI(cfg))
-	private.HandleFunc("/api/cam1/home", handleCam1Home(ptz))
-	private.HandleFunc("/api/cam1/zoom", handleZoom(ptz))
-	private.HandleFunc("/api/cam1/focus", handleFocus(ptz))
-	private.HandleFunc("/api/cam1/status", handleStatus(ptz))
-	private.HandleFunc("/api/cam1/raw", handleRaw(ptz, cfg.PTZAllowRaw))
+	if ptz != nil {
+		private.HandleFunc("/api/cam1/home", handleCam1Home(ptz))
+		private.HandleFunc("/api/cam1/zoom", handleZoom(ptz))
+		private.HandleFunc("/api/cam1/focus", handleFocus(ptz))
+		private.HandleFunc("/api/cam1/status", handleStatus(ptz))
+		private.HandleFunc("/api/cam1/raw", handleRaw(ptz, cfg.PTZAllowRaw))
+	} else {
+		reason := ptzInitErr.Error()
+		private.HandleFunc("/api/cam1/status", handleCam1UnavailableStatus(reason))
+		private.HandleFunc("/api/cam1/home", handleCam1UnavailableControl(http.MethodPost, reason))
+		private.HandleFunc("/api/cam1/zoom", handleCam1UnavailableControl(http.MethodPost, reason))
+		private.HandleFunc("/api/cam1/focus", handleCam1UnavailableControl(http.MethodPost, reason))
+		private.HandleFunc("/api/cam1/raw", handleCam1UnavailableControl(http.MethodPost, reason))
+	}
 	private.HandleFunc("/api/cam2/zoom", handleCam2Zoom(cam2Zoom))
 	private.HandleFunc("/api/cam2/zoom/status", handleCam2ZoomStatus(cam2Zoom))
 	private.HandleFunc("/cam1/rtc/", makePrefixReverseProxy(cfg.Cam1RTCBase, "/cam1/rtc/", "cam1-rtc"))

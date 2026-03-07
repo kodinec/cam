@@ -15,21 +15,20 @@ services:
   cam1-publisher:
     image: jrottenberg/ffmpeg:6.1-ubuntu
     restart: unless-stopped
+    privileged: true
     depends_on:
       - mediamtx
-    devices:
-      - /dev/video0:/dev/video0
-      - /dev/video1:/dev/video1
     volumes:
+      - /dev:/dev
       - ./scripts:/scripts:ro
-      - /dev/v4l/by-id:/dev/v4l/by-id:ro
     environment:
       CAM1_DEVICE: ${CAM1_DEVICE:-/dev/video0}
-      CAM1_FPS: ${CAM1_FPS:-25}
+      CAM1_MODE: ${CAM1_MODE:-auto}
+      CAM1_FPS: ${CAM1_FPS:-30}
       CAM1_RES: ${CAM1_RES:-1920x1080}
       CAM1_THREAD_QUEUE: ${CAM1_THREAD_QUEUE:-256}
       CAM1_X264_PRESET: ${CAM1_X264_PRESET:-veryfast}
-      CAM1_CRF: ${CAM1_CRF:-18}
+      CAM1_CRF: ${CAM1_CRF:-16}
       CAM1_GOP: ${CAM1_GOP:-25}
       CAM1_RTSP_URL: rtsp://mediamtx:8554/cam1
     command: ["/bin/sh", "/scripts/cam1_publisher.sh"]
@@ -37,16 +36,14 @@ services:
   cam2-publisher:
     image: jrottenberg/ffmpeg:6.1-ubuntu
     restart: unless-stopped
+    privileged: true
     depends_on:
       - mediamtx
-    devices:
-      - /dev/video2:/dev/video2
-      - /dev/video3:/dev/video3
     volumes:
+      - /dev:/dev
       - ./scripts:/scripts:ro
-      - /dev/v4l/by-id:/dev/v4l/by-id:ro
     environment:
-      CAM2_DEVICE: ${CAM2_DEVICE:-/dev/video2}
+      CAM2_DEVICE: ${CAM2_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}
       CAM2_MODE: ${CAM2_MODE:-auto}
       CAM2_THREAD_QUEUE: ${CAM2_THREAD_QUEUE:-256}
       CAM2_H264_RES: ${CAM2_H264_RES:-1920x1080}
@@ -65,17 +62,14 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    privileged: true
     depends_on:
       - mediamtx
       - cam1-publisher
       - cam2-publisher
-    devices:
-      - ${PTZ_SERIAL:-/dev/ttyACM0}:${PTZ_SERIAL:-/dev/ttyACM0}
-      - /dev/video2:/dev/video2
-      - /dev/video3:/dev/video3
     volumes:
+      - /dev:/dev
       - ${CAM1_MAP_FILE:-./zoom8_focusmap.json}:/app/zoom8_focusmap.json:ro
-      - /dev/v4l/by-id:/dev/v4l/by-id:ro
     environment:
       LISTEN: ":8787"
       PTZ_USER: ${PTZ_USER:-admin}
@@ -109,8 +103,8 @@ services:
       CAM1_RELEASE_FEED: ${CAM1_RELEASE_FEED:-80}
       CAM1_RTC_BASE: http://mediamtx:8889/
       CAM2_RTC_BASE: http://mediamtx:8889/
-      CAM2_DEVICE: ${CAM2_DEVICE:-/dev/video2}
-      CAM2_CONTROL_DEVICE: ${CAM2_CONTROL_DEVICE:-/dev/video2}
+      CAM2_DEVICE: ${CAM2_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}
+      CAM2_CONTROL_DEVICE: ${CAM2_CONTROL_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}
       CAM2_ZOOM_STEP: "1"
     ports:
       - "8787:8787"

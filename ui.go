@@ -64,14 +64,18 @@ func uiHTML(cfg Config) string {
         linear-gradient(135deg, var(--bg-a), var(--bg-b));
       min-height: 100vh;
     }
-    .wrap { max-width: 100%%; margin: 0 auto; padding: 18px; }
+    .wrap {
+      width: min(100%%, 1880px);
+      margin: 0 auto;
+      padding: clamp(10px, 1.4vw, 22px);
+    }
     .head {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-      padding: 14px 16px;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: clamp(10px, 1.1vw, 16px);
       border: 1px solid var(--line);
       border-radius: 14px;
       background: var(--card);
@@ -83,7 +87,7 @@ func uiHTML(cfg Config) string {
       gap: 10px;
       flex-wrap: wrap;
     }
-    h1 { margin: 0; font-size: 22px; letter-spacing: 0.2px; }
+    h1 { margin: 0; font-size: clamp(20px, 2.2vw, 34px); letter-spacing: 0.2px; }
     .ver {
       border: 1px solid var(--line);
       border-radius: 999px;
@@ -107,11 +111,7 @@ func uiHTML(cfg Config) string {
       background: var(--accent-2);
       color: #fff;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .grid.single { grid-template-columns: 1fr; }
     .panel {
       border: 1px solid var(--line);
@@ -122,22 +122,30 @@ func uiHTML(cfg Config) string {
     }
     .panel.hidden { display: none; }
     .panel-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 8px;
-      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 14px;
+      align-items: start;
+      padding: clamp(10px, 1vw, 14px);
       border-bottom: 1px solid var(--line);
       background: #ffffffb5;
     }
-    .panel-head h2 { margin: 0; font-size: 15px; }
+    .panel-head h2 { margin: 0; font-size: clamp(15px, 1.35vw, 24px); line-height: 1.2; }
+    .panel-title { min-width: 0; }
+    .panel-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .stream-label {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      word-break: break-word;
+    }
     .small { color: var(--muted); font-size: 12px; }
     .stream-wrap {
       background: #0a1117;
       position: relative;
       width: 100%%;
       aspect-ratio: 16 / 9;
-      min-height: 420px;
+      min-height: clamp(230px, 32vw, 72vh);
       border-bottom: 1px solid var(--line);
     }
     .stream-frame {
@@ -156,7 +164,7 @@ func uiHTML(cfg Config) string {
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
-      padding: 12px 14px;
+      padding: clamp(10px, 1vw, 14px);
       border-top: 1px dashed #c4d0d8;
     }
     .controls:first-of-type { border-top: none; }
@@ -168,6 +176,7 @@ func uiHTML(cfg Config) string {
       padding: 8px 12px;
       cursor: pointer;
       font-weight: 600;
+      font-size: clamp(14px, 1.05vw, 18px);
     }
     button.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
     button.blue { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
@@ -178,9 +187,10 @@ func uiHTML(cfg Config) string {
       color: var(--ink);
       border-radius: 8px;
       padding: 7px 8px;
-      width: 92px;
+      width: clamp(82px, 7vw, 120px);
       font-family: inherit;
       font-weight: 600;
+      font-size: clamp(14px, 1vw, 17px);
     }
     .log {
       margin-top: 14px;
@@ -202,6 +212,12 @@ func uiHTML(cfg Config) string {
       text-decoration: none;
       border-bottom: 1px dotted var(--accent-2);
     }
+    .stream-link {
+      color: var(--accent-2);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--accent-2);
+    }
+    .stream-link:hover { opacity: 0.85; }
     .small a:hover { opacity: 0.85; }
     pre {
       margin: 0;
@@ -214,10 +230,18 @@ func uiHTML(cfg Config) string {
       font-size: 12px;
       line-height: 1.45;
     }
-    @media (max-width: 1040px) {
+    @media (max-width: 1380px) {
       .grid { grid-template-columns: 1fr; }
       .grid.single { grid-template-columns: 1fr; }
-      .stream-wrap, .stream-frame { min-height: 260px; }
+      .stream-wrap, .stream-frame { min-height: clamp(220px, 48vw, 70vh); }
+      .panel-head { grid-template-columns: 1fr; }
+      .panel-tools { justify-content: flex-start; }
+    }
+    @media (max-width: 720px) {
+      .modes { width: 100%%; }
+      .mode { flex: 1 1 auto; min-width: 0; }
+      .controls { gap: 6px; }
+      .controls label { width: 100%%; color: var(--muted); }
     }
   </style>
 </head>
@@ -238,11 +262,18 @@ func uiHTML(cfg Config) string {
   <main id="grid" class="grid">
     <section id="panel-cam1" class="panel">
       <div class="panel-head">
-        <h2>Camera 1: %s</h2>
-        <span class="small">Stream: <a id="cam1RtcLink" href="/cam1/rtc/cam1" target="_blank" rel="noopener">/cam1/rtc/cam1</a></span>
+        <div class="panel-title">
+          <h2>Camera 1: %s</h2>
+          <div class="stream-label">WebRTC stream: <a id="cam1RtcLink" class="stream-link" href="/cam1/rtc/cam1" target="_blank" rel="noopener">/cam1/rtc/cam1</a></div>
+        </div>
+        <div class="panel-tools">
+          <button onclick="reloadStream('cam1')">Reload</button>
+          <button onclick="openStream('cam1')">Open</button>
+          <button class="blue" onclick="fullscreenStream('cam1Rtc', 'cam1')">Fullscreen</button>
+        </div>
       </div>
       <div class="stream-wrap">
-        <iframe id="cam1Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture"></iframe>
+        <iframe id="cam1Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
       </div>
       <div class="controls">
         <button id="cam1HomeBtn" class="danger" onclick="cam1Home()">Start Flow + Step0</button>
@@ -267,11 +298,18 @@ func uiHTML(cfg Config) string {
 
     <section id="panel-cam2" class="panel">
       <div class="panel-head">
-        <h2>Camera 2: %s</h2>
-        <span class="small">Stream: <a id="cam2RtcLink" href="/cam2/rtc/cam2" target="_blank" rel="noopener">/cam2/rtc/cam2</a></span>
+        <div class="panel-title">
+          <h2>Camera 2: %s</h2>
+          <div class="stream-label">WebRTC stream: <a id="cam2RtcLink" class="stream-link" href="/cam2/rtc/cam2" target="_blank" rel="noopener">/cam2/rtc/cam2</a></div>
+        </div>
+        <div class="panel-tools">
+          <button onclick="reloadStream('cam2')">Reload</button>
+          <button onclick="openStream('cam2')">Open</button>
+          <button class="blue" onclick="fullscreenStream('cam2Rtc', 'cam2')">Fullscreen</button>
+        </div>
       </div>
       <div class="stream-wrap">
-        <iframe id="cam2Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture"></iframe>
+        <iframe id="cam2Rtc" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
       </div>
       <div class="controls">
         <button id="cam2ZoomMinus" onclick="cam2ZoomDelta(-1)">Zoom -</button>
@@ -332,6 +370,37 @@ function mediaMTXWebRTCURL(streamName) {
   return u.toString();
 }
 
+function streamFrameId(streamName) {
+  return streamName === 'cam1' ? 'cam1Rtc' : 'cam2Rtc';
+}
+
+function openStream(streamName) {
+  const url = mediaMTXWebRTCURL(streamName);
+  window.open(url, '_blank', 'noopener');
+}
+
+function reloadStream(streamName) {
+  const frame = document.getElementById(streamFrameId(streamName));
+  if (!frame) return;
+  const url = mediaMTXWebRTCURL(streamName);
+  frame.src = 'about:blank';
+  setTimeout(() => {
+    frame.src = url + '&_ts=' + Date.now();
+  }, 120);
+}
+
+async function fullscreenStream(frameId, streamName) {
+  const frame = document.getElementById(frameId);
+  if (!frame) return;
+  try {
+    if (frame.requestFullscreen) {
+      await frame.requestFullscreen();
+      return;
+    }
+  } catch (_) {}
+  openStream(streamName);
+}
+
 function bindStreamLinks() {
   const cam1RTCURL = mediaMTXWebRTCURL('cam1');
   const cam2RTCURL = mediaMTXWebRTCURL('cam2');
@@ -358,16 +427,26 @@ function bindStreamLinks() {
 }
 
 async function api(url, method, body) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
-  if (body !== undefined) opts.body = JSON.stringify(body);
-  const r = await fetch(url, opts);
-  const txt = await r.text();
-  let data;
-  try { data = JSON.parse(txt); } catch (_) { data = { raw: txt }; }
-  data.httpStatus = r.status;
-  data._url = url;
-  document.getElementById('log').textContent = JSON.stringify(data, null, 2);
-  return data;
+  try {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    const txt = await r.text();
+    let data;
+    try { data = JSON.parse(txt); } catch (_) { data = { raw: txt }; }
+    data.httpStatus = r.status;
+    data._url = url;
+    document.getElementById('log').textContent = JSON.stringify(data, null, 2);
+    return data;
+  } catch (e) {
+    const data = {
+      error: e && e.message ? e.message : 'network error',
+      httpStatus: 0,
+      _url: url
+    };
+    document.getElementById('log').textContent = JSON.stringify(data, null, 2);
+    return data;
+  }
 }
 
 function updateCam1State(data) {
@@ -451,6 +530,7 @@ setView('both');
 bindStreamLinks();
 cam1Status();
 cam2Status();
+setInterval(() => { cam2Status(); }, 15000);
 </script>
 </body>
 </html>`,
