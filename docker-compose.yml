@@ -27,12 +27,12 @@ services:
       CAM1_FPS: ${CAM1_FPS:-25}
       CAM1_RES: ${CAM1_RES:-1920x1080}
       CAM1_THREAD_QUEUE: ${CAM1_THREAD_QUEUE:-64}
-      CAM1_X264_PRESET: ${CAM1_X264_PRESET:-ultrafast}
-      CAM1_CRF: ${CAM1_CRF:-16}
-      CAM1_BITRATE: ${CAM1_BITRATE:-8M}
+      CAM1_X264_PRESET: ${CAM1_X264_PRESET:-superfast}
+      CAM1_CRF: ${CAM1_CRF:-14}
+      CAM1_BITRATE: ${CAM1_BITRATE:-10M}
       CAM1_BUFSIZE: ${CAM1_BUFSIZE:-512k}
       CAM1_X264_PARAMS: ${CAM1_X264_PARAMS:-bframes=0:rc-lookahead=0:sync-lookahead=0:scenecut=0}
-      CAM1_GOP: ${CAM1_GOP:-25}
+      CAM1_GOP: ${CAM1_GOP:-15}
       CAM1_RTSP_URL: rtsp://mediamtx:8554/cam1
     entrypoint: ["/bin/sh", "/scripts/cam1_publisher.sh"]
 
@@ -53,7 +53,7 @@ services:
       CAM2_H264_FPS: ${CAM2_H264_FPS:-30}
       CAM2_MJPEG_RES: ${CAM2_MJPEG_RES:-1024x768}
       CAM2_MJPEG_FPS: ${CAM2_MJPEG_FPS:-15}
-      CAM2_GOP: ${CAM2_GOP:-25}
+      CAM2_GOP: ${CAM2_GOP:-15}
       CAM2_ANALYZE_DURATION: ${CAM2_ANALYZE_DURATION:-5M}
       CAM2_PROBE_SIZE: ${CAM2_PROBE_SIZE:-5M}
       CAM2_MJPEG_CRF: ${CAM2_MJPEG_CRF:-24}

@@ -123,7 +123,7 @@ func uiHTML(cfg Config) string {
     .panel.hidden { display: none; }
     .panel-head {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 8px 14px;
       align-items: start;
       padding: clamp(10px, 1vw, 14px);
@@ -132,12 +132,21 @@ func uiHTML(cfg Config) string {
     }
     .panel-head h2 { margin: 0; font-size: clamp(15px, 1.35vw, 24px); line-height: 1.2; }
     .panel-title { min-width: 0; }
+    .stream-state {
+      max-width: 250px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: inline-block;
+      vertical-align: middle;
+    }
     .panel-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .stream-label {
       margin-top: 6px;
       font-size: 12px;
       color: var(--muted);
-      word-break: break-word;
+      overflow-wrap: anywhere;
+      word-break: normal;
     }
     .small { color: var(--muted); font-size: 12px; }
     .stream-wrap {
@@ -269,7 +278,7 @@ func uiHTML(cfg Config) string {
           <div class="stream-label">WebRTC stream: <a id="cam1RtcLink" class="stream-link" href="/cam1/rtc/cam1" target="_blank" rel="noopener">/cam1/rtc/cam1</a></div>
         </div>
         <div class="panel-tools">
-          <span id="cam1StreamState" class="small state-online">online</span>
+          <span id="cam1StreamState" class="small stream-state state-online">online</span>
           <button onclick="reloadStream('cam1')">Reload</button>
           <button onclick="openStream('cam1')">Open</button>
           <button class="blue" onclick="fullscreenStream('cam1Rtc', 'cam1')">Fullscreen</button>
@@ -306,7 +315,7 @@ func uiHTML(cfg Config) string {
           <div class="stream-label">WebRTC stream: <a id="cam2RtcLink" class="stream-link" href="/cam2/rtc/cam2" target="_blank" rel="noopener">/cam2/rtc/cam2</a></div>
         </div>
         <div class="panel-tools">
-          <span id="cam2StreamState" class="small">checking...</span>
+          <span id="cam2StreamState" class="small stream-state">checking...</span>
           <button onclick="reloadStream('cam2')">Reload</button>
           <button onclick="openStream('cam2')">Open</button>
           <button class="blue" onclick="fullscreenStream('cam2Rtc', 'cam2')">Fullscreen</button>
@@ -429,14 +438,17 @@ function bindStreamLinks() {
 function setCam2StreamOnline(online, note) {
   const state = document.getElementById('cam2StreamState');
   const frame = document.getElementById('cam2Rtc');
+  const compactNote = shortError(note);
   if (state) {
     state.classList.remove('state-online', 'state-offline');
     if (online) {
       state.classList.add('state-online');
       state.textContent = 'online';
+      state.title = '';
     } else {
       state.classList.add('state-offline');
-      state.textContent = note ? ('offline: ' + note) : 'offline';
+      state.textContent = 'offline';
+      state.title = compactNote ? ('Camera 2: ' + compactNote) : 'Camera 2 offline';
     }
   }
   if (!frame) return;
@@ -446,6 +458,15 @@ function setCam2StreamOnline(online, note) {
   } else {
     if (frame.src && frame.src !== 'about:blank') frame.src = 'about:blank';
   }
+}
+
+function shortError(msg) {
+  if (!msg) return '';
+  let s = String(msg).replace(/\s+/g, ' ').trim();
+  s = s.replace(/^v4l2-ctl\s+-d\s+\S+\s+--list-ctrls-menus:\s*/i, '');
+  s = s.replace(/^Cannot open device\s+\S+,\s*/i, '');
+  if (s.length > 90) s = s.slice(0, 90) + '...';
+  return s;
 }
 
 async function api(url, method, body) {
@@ -544,7 +565,8 @@ async function cam2Status() {
     setCam2StreamOnline(true, '');
   } else {
     const err = (data && data.error) ? data.error : 'zoom control is not available in V4L2';
-    setCam2ZoomEnabled(false, 'Camera 2 zoom disabled: ' + err);
+    const short = shortError(err);
+    setCam2ZoomEnabled(false, 'Camera 2 zoom disabled: ' + (short || 'device unavailable'));
     setCam2StreamOnline(false, err);
   }
   return data;
