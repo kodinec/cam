@@ -58,3 +58,16 @@ func TestRememberStatusCachesWCO(t *testing.T) {
 		t.Fatalf("parseWPos() = (%v, %v), want (0.5, 0.5)", x, y)
 	}
 }
+
+func TestStatusLinePrefersLastStatusFrame(t *testing.T) {
+	lines := []string{
+		"ok",
+		"<Idle|MPos:0.000,0.200,0.000,0.000|Pn:>",
+		"<Run|MPos:0.000,-0.500,0.000,0.000|Pn:>",
+		"<Idle|MPos:0.000,-2.000,0.000,0.000|Pn:>",
+	}
+
+	if got := statusLine(lines); got != lines[3] {
+		t.Fatalf("statusLine() = %q, want %q", got, lines[3])
+	}
+}

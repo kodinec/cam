@@ -879,25 +879,26 @@ func (p *PTZ) sendExpectStatusLocked(cmd string) ([]string, error) {
 	if err := p.writeLineLocked(cmd); err != nil {
 		return nil, err
 	}
+	// Match the Python runtime: give the controller a short moment to emit all
+	// queued status lines, then use the last status from the batch.
+	time.Sleep(120 * time.Millisecond)
+
 	deadline := time.Now().Add(p.cmdTimeout)
-	lines := make([]string, 0, 2)
-	for {
-		line, err := p.readLineLocked(deadline)
-		if err != nil {
-			return lines, fmt.Errorf("wait status for %q: %w", cmd, err)
-		}
-		if line == "" {
-			continue
-		}
-		lines = append(lines, line)
-		if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
+	lines := make([]string, 0, 4)
+	for time.Now().Before(deadline) {
+		lines = append(lines, p.readAvailableLocked(180*time.Millisecond)...)
+		if st := statusLine(lines); strings.HasPrefix(st, "<") && strings.HasSuffix(st, ">") {
 			return lines, nil
 		}
-		lc := strings.ToLower(line)
-		if strings.HasPrefix(lc, "error") {
-			return lines, fmt.Errorf(line)
+		for _, line := range lines {
+			lc := strings.ToLower(line)
+			if strings.HasPrefix(lc, "error") {
+				return lines, fmt.Errorf(line)
+			}
 		}
+		time.Sleep(40 * time.Millisecond)
 	}
+	return lines, fmt.Errorf("wait status for %q: timeout", cmd)
 }
 
 func (p *PTZ) writeLineLocked(cmd string) error {
