@@ -8,6 +8,18 @@ import (
 	"strings"
 )
 
+func streamProxyPath(stream string) string {
+	stream = strings.Trim(stream, "/")
+	if stream == "" {
+		return "/"
+	}
+	return "/" + stream + "/"
+}
+
+func streamProxyBaseURL(baseURL, stream string) string {
+	return strings.TrimRight(baseURL, "/") + streamProxyPath(stream)
+}
+
 func makePrefixReverseProxy(baseURL, prefix, label string) http.HandlerFunc {
 	u, err := url.Parse(baseURL)
 	if err != nil {

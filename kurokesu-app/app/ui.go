@@ -238,7 +238,7 @@ func uiHTML(cfg Config) string {
     <div class="panel-head">
       <div>
         <h2>%s</h2>
-        <div class="stream-label">WebRTC stream: <a id="rtcLink" class="stream-link" href="/rtc/cam1/" target="_blank" rel="noopener">/rtc/cam1/</a></div>
+        <div class="stream-label">WebRTC stream: <a id="rtcLink" class="stream-link" href="/cam1/" target="_blank" rel="noopener">/cam1/</a></div>
       </div>
       <div class="panel-tools">
         <span id="stateBadge" class="badge">checking...</span>
@@ -284,7 +284,7 @@ func uiHTML(cfg Config) string {
 
 <script>
 function rtcURL() {
-  return '/rtc/cam1/';
+  return '/cam1/';
 }
 
 function bindStream() {
