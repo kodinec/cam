@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"strings"
 )
 
 func serveUI(cfg Config) http.HandlerFunc {
@@ -19,17 +18,6 @@ func serveUI(cfg Config) http.HandlerFunc {
 }
 
 func uiHTML(cfg Config) string {
-	esc := func(s string) string {
-		r := strings.NewReplacer(
-			"&", "&amp;",
-			"<", "&lt;",
-			">", "&gt;",
-			`"`, "&quot;",
-			"'", "&#39;",
-		)
-		return r.Replace(s)
-	}
-
 	return fmt.Sprintf(`<!doctype html>
 <html lang="en">
 <head>
@@ -190,6 +178,20 @@ func uiHTML(cfg Config) string {
       font-size: 12px;
       color: var(--muted);
     }
+    .badge-online {
+      color: #0d5b45;
+      background: rgba(31, 143, 106, 0.14);
+      border-color: rgba(31, 143, 106, 0.35);
+    }
+    .badge-offline {
+      color: #8d2d2a;
+      background: rgba(180, 67, 63, 0.14);
+      border-color: rgba(180, 67, 63, 0.35);
+    }
+    .badge-checking {
+      color: var(--muted);
+      background: #ffffffcc;
+    }
     .log {
       margin-top: 14px;
       border: 1px solid var(--line);
@@ -229,19 +231,16 @@ func uiHTML(cfg Config) string {
   <header class="head">
     <div class="title">
       <h1>kurokesu zoom helper</h1>
-      <span class="ver">8-step map</span>
     </div>
-    <div class="summary">Single-camera control surface for %s. Zoom runs on the first 8 safe points from the 25-point source map, with focus values applied from the same profile.</div>
   </header>
 
   <section class="panel">
     <div class="panel-head">
       <div>
-        <h2>%s</h2>
-        <div class="stream-label">WebRTC stream: <a id="rtcLink" class="stream-link" href="/cam1/" target="_blank" rel="noopener">/cam1/</a></div>
+        <h2>Camera</h2>
       </div>
       <div class="panel-tools">
-        <span id="stateBadge" class="badge">checking...</span>
+        <span id="cameraBadge" class="badge">camera checking</span>
         <button onclick="reloadStream()">Reload</button>
         <button onclick="openStream()">Open</button>
         <button class="blue" onclick="fullscreenStream()">Fullscreen</button>
@@ -283,17 +282,83 @@ func uiHTML(cfg Config) string {
 </div>
 
 <script>
+let streamFrameReady = false;
+
 function rtcURL() {
   return '/cam1/';
 }
 
+function setCameraBadge(mode) {
+  const badge = document.getElementById('cameraBadge');
+  if (!badge) return;
+  badge.classList.remove('badge-online', 'badge-offline', 'badge-checking');
+  if (mode === true) {
+    badge.textContent = 'camera online';
+    badge.classList.add('badge-online');
+    return;
+  }
+  if (mode === false) {
+    badge.textContent = 'camera offline';
+    badge.classList.add('badge-offline');
+    return;
+  }
+  badge.textContent = 'camera checking';
+  badge.classList.add('badge-checking');
+}
+
+function frameStatusLooksOffline() {
+  const frame = document.getElementById('rtcFrame');
+  if (!frame || !streamFrameReady) return null;
+  try {
+    const doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+    const text = doc && doc.body ? String(doc.body.innerText || '').toLowerCase() : '';
+    if (!text) return true;
+    if (text.includes('error:') || text.includes('retrying') || text.includes('bad status') || text.includes('stream not found')) {
+      return true;
+    }
+    return false;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function probeCameraStatus() {
+  try {
+    const r = await fetch(rtcURL(), { method: 'GET', cache: 'no-store' });
+    if (!r.ok) {
+      setCameraBadge(false);
+      return false;
+    }
+  } catch (_) {
+    setCameraBadge(false);
+    return false;
+  }
+
+  const offline = frameStatusLooksOffline();
+  if (offline === true) {
+    setCameraBadge(false);
+    return false;
+  }
+  if (offline === false) {
+    setCameraBadge(true);
+    return true;
+  }
+  setCameraBadge(null);
+  return null;
+}
+
 function bindStream() {
   const url = rtcURL();
-  const link = document.getElementById('rtcLink');
   const frame = document.getElementById('rtcFrame');
-  if (link) {
-    link.href = url;
-    link.textContent = url;
+  if (frame) {
+    frame.addEventListener('load', () => {
+      streamFrameReady = true;
+      probeCameraStatus();
+    });
+    frame.addEventListener('error', () => {
+      streamFrameReady = false;
+      setCameraBadge(false);
+    });
   }
   if (frame && frame.src !== window.location.origin + url) {
     frame.src = url;
@@ -307,6 +372,8 @@ function openStream() {
 function reloadStream() {
   const frame = document.getElementById('rtcFrame');
   if (!frame) return;
+  streamFrameReady = false;
+  setCameraBadge(null);
   frame.src = 'about:blank';
   setTimeout(() => {
     frame.src = rtcURL() + '?_ts=' + Date.now();
@@ -357,7 +424,6 @@ function setControlsEnabled(enabled) {
 
 function updateState(data) {
   if (!data) return data;
-  const badge = document.getElementById('stateBadge');
   const info = document.getElementById('mapInfo');
   const pos = document.getElementById('positionInfo');
   const zoomSet = document.getElementById('zoomSet');
@@ -365,14 +431,12 @@ function updateState(data) {
   const state = data.mapState || (data.step0 && data.step0.mapState) || null;
 
   if (!data.available && data.available !== undefined) {
-    if (badge) badge.textContent = 'ptz unavailable';
     if (info) info.textContent = data.error || 'PTZ is unavailable';
     setControlsEnabled(false);
     return data;
   }
 
   if (!state || !state.enabled) {
-    if (badge) badge.textContent = 'map unavailable';
     if (info) info.textContent = 'Map is not configured';
     setControlsEnabled(false);
     return data;
@@ -381,18 +445,14 @@ function updateState(data) {
   const idx = Number(state.currentIndex ?? data.mapIndex ?? 0);
   const max = Number(state.maxIndex ?? 0);
   const homed = Boolean(state.homed);
-  const sourcePoints = Number(state.sourcePoints ?? max + 1);
-  const sourceFlags = Array.isArray(state.sourceFlaggedIndices) ? state.sourceFlaggedIndices.join(',') : '';
-  const preload = Number(state.xPreload || 0).toFixed(3);
   const coord = state.coordSpace || 'wpos';
 
-  if (badge) badge.textContent = homed ? ('ready step ' + idx + '/' + max) : 'needs homing';
   if (zoomSet) {
     zoomSet.max = String(max);
     zoomSet.value = String(idx);
   }
   if (info) {
-    info.textContent = 'Map ON: ' + (max + 1) + ' active steps from ' + sourcePoints + ' source points; coord=' + coord + ' preload=' + preload + (sourceFlags ? ('; source flags=' + sourceFlags) : '');
+    info.textContent = homed ? ('Map ready | ' + coord.toUpperCase()) : 'Homing required';
   }
   setControlsEnabled(homed);
 
@@ -427,11 +487,11 @@ function camFocusSet() {
 
 bindStream();
 camStatus();
+probeCameraStatus();
 setInterval(() => { camStatus(); }, 15000);
+setInterval(() => { probeCameraStatus(); }, 5000);
 </script>
 </body>
 </html>`,
-		esc(cfg.CameraName),
-		esc(cfg.CameraName),
 	)
 }
