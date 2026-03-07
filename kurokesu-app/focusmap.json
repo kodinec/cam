@@ -1,0 +1,112 @@
+{
+  "coordSpace": "wpos",
+  "xPreload": 0.02,
+  "points": [
+    {
+      "zoomX": 0.0,
+      "focusY": -2.2
+    },
+    {
+      "zoomX": 1.031,
+      "focusY": -2.5
+    },
+    {
+      "zoomX": 2.312,
+      "focusY": -2.95
+    },
+    {
+      "zoomX": 3.592,
+      "focusY": -3.2
+    },
+    {
+      "zoomX": 4.873,
+      "focusY": -3.3
+    },
+    {
+      "zoomX": 6.154,
+      "focusY": -3.2
+    },
+    {
+      "zoomX": 7.435,
+      "focusY": -2.5
+    },
+    {
+      "zoomX": 8.716,
+      "focusY": -1.15
+    },
+    {
+      "zoomX": 9.747,
+      "focusY": 0.0
+    },
+    {
+      "zoomX": 11.277,
+      "focusY": -0.3
+    },
+    {
+      "zoomX": 12.808,
+      "focusY": 0.4
+    },
+    {
+      "zoomX": 13.839,
+      "focusY": -3.45,
+      "limitXY": "X"
+    },
+    {
+      "zoomX": 14.87,
+      "focusY": -3.75,
+      "limitXY": "X"
+    },
+    {
+      "zoomX": 16.151,
+      "focusY": -4.2,
+      "limitXY": "X"
+    },
+    {
+      "zoomX": 18.182,
+      "focusY": -4.8,
+      "limitXY": "X"
+    },
+    {
+      "zoomX": 19.212,
+      "focusY": -5.1
+    },
+    {
+      "zoomX": 20.493,
+      "focusY": -5.55
+    },
+    {
+      "zoomX": 21.774,
+      "focusY": -5.85
+    },
+    {
+      "zoomX": 23.055,
+      "focusY": -6.0
+    },
+    {
+      "zoomX": 24.336,
+      "focusY": -6.0
+    },
+    {
+      "zoomX": 25.617,
+      "focusY": -5.7
+    },
+    {
+      "zoomX": 26.898,
+      "focusY": -4.8
+    },
+    {
+      "zoomX": 28.178,
+      "focusY": -3.3
+    },
+    {
+      "zoomX": 29.459,
+      "focusY": -0.3,
+      "limitXY": "Y"
+    },
+    {
+      "zoomX": 30.74,
+      "focusY": 7.05,
+      "limitXY": "Y"
+    }
+  ]
+}

@@ -11,7 +11,7 @@ What it does:
 - publishes Camera 1 to MediaMTX (`FFmpeg -> RTSP -> WebRTC`)
 - serves a root-style UI focused on one camera
 - runs map-based zoom from `camzoom.py` logic
-- uses the first `8` steps from `zoom25_focusmap.json`
+- uses the first `8` steps from `focusmap.json`
 - keeps `limitXY` safety metadata and rejects flagged selected points by default
 
 Video defaults are tuned for a local-box setup:
@@ -39,11 +39,13 @@ If `iHD` does not work on an older Intel GPU, try `CAM1_VAAPI_DRIVER=i965`.
 
 This project intentionally follows the `camzoom.py` model:
 
-- source map: `zoom25_focusmap.json`
+- source map: `focusmap.json`
 - active runtime steps: first `8` points (`CAM_MAP_STEPS=8`)
 
 The checked-in 25-point source map contains flagged endstop points later in the table.
 This runtime keeps the source map intact but only activates the safe 8-step window unless you explicitly change it.
+The runtime map file is intentionally lean: `coordSpace`, `xPreload`, and `points[]` with `zoomX`, `focusY`, and optional `limitXY`.
+The loader still accepts the older array-based schema as a compatibility fallback.
 
 ## Run
 

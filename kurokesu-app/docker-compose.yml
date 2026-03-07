@@ -38,7 +38,7 @@ services:
       - cam1-publisher
     volumes:
       - /dev:/dev
-      - ./zoom25_focusmap.json:/app/zoom25_focusmap.json:ro
+      - ./focusmap.json:/app/focusmap.json:ro
     env_file:
       - .env
     ports:

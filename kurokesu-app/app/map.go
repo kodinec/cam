@@ -19,7 +19,17 @@ type ZoomMap struct {
 	SelectedFlagged      []int
 }
 
+type zoomMapPoint struct {
+	ZoomX   float64  `json:"zoomX"`
+	FocusY  *float64 `json:"focusY"`
+	LimitXY string   `json:"limitXY"`
+}
+
 type zoomMapFile struct {
+	CoordSpace string         `json:"coordSpace"`
+	XPreload   *float64       `json:"xPreload"`
+	Points     []zoomMapPoint `json:"points"`
+
 	Meta struct {
 		CoordSpace string   `json:"coord_space"`
 		XPreload   *float64 `json:"x_preload"`
@@ -34,6 +44,55 @@ func (m *ZoomMap) MaxIndex() int {
 		return -1
 	}
 	return len(m.ZoomX) - 1
+}
+
+func (mf *zoomMapFile) normalizedPoints() ([]zoomMapPoint, error) {
+	if len(mf.Points) > 0 {
+		points := make([]zoomMapPoint, len(mf.Points))
+		copy(points, mf.Points)
+		return points, nil
+	}
+
+	if len(mf.ZoomX) == 0 {
+		return nil, fmt.Errorf("empty points")
+	}
+	if len(mf.FocusY) > 0 && len(mf.FocusY) != len(mf.ZoomX) {
+		return nil, fmt.Errorf("zoomX/focusY length mismatch")
+	}
+
+	points := make([]zoomMapPoint, len(mf.ZoomX))
+	for i := range mf.ZoomX {
+		points[i].ZoomX = mf.ZoomX[i]
+		if i < len(mf.FocusY) && mf.FocusY[i] != nil {
+			v := *mf.FocusY[i]
+			points[i].FocusY = &v
+		}
+		if i < len(mf.LimitXY) {
+			points[i].LimitXY = mf.LimitXY[i]
+		}
+	}
+	return points, nil
+}
+
+func (mf *zoomMapFile) coordSpace() string {
+	coord := strings.ToLower(strings.TrimSpace(mf.CoordSpace))
+	if coord == "" {
+		coord = strings.ToLower(strings.TrimSpace(mf.Meta.CoordSpace))
+	}
+	if coord == "" {
+		coord = "wpos"
+	}
+	return coord
+}
+
+func (mf *zoomMapFile) xPreload(defaultValue float64) float64 {
+	if mf.XPreload != nil {
+		return *mf.XPreload
+	}
+	if mf.Meta.XPreload != nil {
+		return *mf.Meta.XPreload
+	}
+	return defaultValue
 }
 
 func loadZoomMap(path string, steps int, strict bool) (*ZoomMap, error) {
@@ -51,52 +110,42 @@ func loadZoomMap(path string, steps int, strict bool) (*ZoomMap, error) {
 	if err := json.Unmarshal(raw, &mf); err != nil {
 		return nil, fmt.Errorf("parse map %s: %w", path, err)
 	}
-	if len(mf.ZoomX) == 0 {
-		return nil, fmt.Errorf("map %s has empty zoomX", path)
-	}
-	if len(mf.FocusY) > 0 && len(mf.FocusY) != len(mf.ZoomX) {
-		return nil, fmt.Errorf("map %s has zoomX/focusY length mismatch", path)
+
+	points, err := mf.normalizedPoints()
+	if err != nil {
+		return nil, fmt.Errorf("map %s: %w", path, err)
 	}
 
-	useN := len(mf.ZoomX)
+	useN := len(points)
 	if steps > 0 {
-		if steps > len(mf.ZoomX) {
-			return nil, fmt.Errorf("map %s has %d zoom points, but CAM_MAP_STEPS=%d", path, len(mf.ZoomX), steps)
+		if steps > len(points) {
+			return nil, fmt.Errorf("map %s has %d zoom points, but CAM_MAP_STEPS=%d", path, len(points), steps)
 		}
 		useN = steps
 	}
 
-	coord := strings.ToLower(strings.TrimSpace(mf.Meta.CoordSpace))
-	if coord == "" {
-		coord = "wpos"
-	}
+	coord := mf.coordSpace()
 	if coord != "wpos" && coord != "mpos" {
 		return nil, fmt.Errorf("map %s has unsupported coord_space=%q (expected wpos or mpos)", path, coord)
 	}
 
-	preload := 0.02
-	if mf.Meta.XPreload != nil {
-		preload = *mf.Meta.XPreload
-	}
+	preload := mf.xPreload(0.02)
 
-	zoom := append([]float64(nil), mf.ZoomX[:useN]...)
+	zoom := make([]float64, useN)
 	focus := make([]*float64, useN)
 	for i := 0; i < useN; i++ {
-		if i >= len(mf.FocusY) || mf.FocusY[i] == nil {
-			continue
+		zoom[i] = points[i].ZoomX
+		if points[i].FocusY != nil {
+			v := *points[i].FocusY
+			focus[i] = &v
 		}
-		v := *mf.FocusY[i]
-		focus[i] = &v
 	}
 
 	limits := make([]string, useN)
-	sourceFlagged := make([]int, 0, len(mf.LimitXY))
+	sourceFlagged := make([]int, 0, len(points))
 	selectedFlagged := make([]int, 0, useN)
-	for i := 0; i < len(mf.ZoomX); i++ {
-		flag := ""
-		if i < len(mf.LimitXY) {
-			flag = strings.ToUpper(strings.TrimSpace(mf.LimitXY[i]))
-		}
+	for i := range points {
+		flag := strings.ToUpper(strings.TrimSpace(points[i].LimitXY))
 		if flag != "" {
 			sourceFlagged = append(sourceFlagged, i)
 		}
@@ -118,7 +167,7 @@ func loadZoomMap(path string, steps int, strict bool) (*ZoomMap, error) {
 		ZoomX:                zoom,
 		FocusY:               focus,
 		LimitXY:              limits,
-		SourcePoints:         len(mf.ZoomX),
+		SourcePoints:         len(points),
 		SourceFlaggedIndices: sourceFlagged,
 		SelectedFlagged:      selectedFlagged,
 	}, nil
