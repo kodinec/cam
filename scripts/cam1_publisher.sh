@@ -3,7 +3,7 @@ set -eu
 
 DEVICE="${CAM1_DEVICE:-/dev/video0}"
 MODE="${CAM1_MODE:-auto}"
-FPS="${CAM1_FPS:-25}"
+FPS="${CAM1_FPS:-30}"
 RES="${CAM1_RES:-1920x1080}"
 THREAD_QUEUE="${CAM1_THREAD_QUEUE:-256}"
 PRESET="${CAM1_X264_PRESET:-veryfast}"
