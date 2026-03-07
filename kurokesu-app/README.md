@@ -28,6 +28,8 @@ This runtime keeps the source map intact but only activates the safe 8-step wind
 
 ```bash
 cd /Users/codinec/cam/kurokesu-app
+cp -n .env.example .env
+# edit .env if paths/ports/auth differ
 docker compose up -d --build
 ```
 
@@ -37,6 +39,7 @@ UI:
 
 ## Main env vars
 
+- `.env` is the main runtime config file for this project
 - `PTZ_SERIAL`
 - `PTZ_SERIAL_FALLBACK`
 - `PTZ_BAUD`
@@ -47,6 +50,17 @@ UI:
 - `APP_PASS`
 
 For the controller, prefer a stable `/dev/serial/by-id/...` path when available.
+
+## Typical first edit
+
+Most installations only need to verify these lines in `.env`:
+
+```dotenv
+CAM1_DEVICE=/dev/v4l/by-id/usb-Kurokesu_C3_4K_00001-video-index0
+PTZ_SERIAL=/dev/ttyACM0
+PTZ_SERIAL_FALLBACK=/dev/serial/by-id/
+WEBRTC_ADDITIONAL_HOSTS=10.10.45.39
+```
 
 ## Runtime behavior
 
