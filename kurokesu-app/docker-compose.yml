@@ -24,18 +24,27 @@ services:
       - .env
     entrypoint: ["/bin/sh", "/scripts/cam1_publisher.sh"]
 
+  ptz:
+    build:
+      context: ./ptz-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /dev:/dev
+      - ./zoom25_focusmap.json:/app/zoom25_focusmap.json:ro
+    env_file:
+      - .env
+
   web:
     build:
       context: ./app
       dockerfile: Dockerfile
     restart: unless-stopped
-    privileged: true
     depends_on:
       - mediamtx
       - cam1-publisher
-    volumes:
-      - /dev:/dev
-      - ./zoom25_focusmap.json:/app/zoom25_focusmap.json:ro
+      - ptz
     env_file:
       - .env
     ports:
