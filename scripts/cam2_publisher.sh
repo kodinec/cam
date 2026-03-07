@@ -27,7 +27,7 @@ run_h264() {
     -thread_queue_size "${THREAD_QUEUE}" \
     -f v4l2 -input_format h264 -framerate "${H264_FPS}" -video_size "${H264_RES}" \
     -i "${dev}" \
-    -an -c:v copy -fps_mode passthrough -vsync passthrough \
+    -an -c:v copy -fps_mode passthrough \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
 
@@ -41,11 +41,12 @@ run_mjpeg() {
     -analyzeduration "${ANALYZE}" -probesize "${PROBE}" \
     -i "${dev}" \
     -an \
+    -vf "scale=in_range=pc:out_range=tv,format=yuv420p,settb=AVTB,setpts=N/(${MJPEG_FPS}*TB)" \
     -c:v libx264 -preset ultrafast -crf "${MJPEG_CRF}" -tune zerolatency \
     -bf 0 -pix_fmt yuv420p -b:v "${MJPEG_BITRATE}" -maxrate "${MJPEG_BITRATE}" -bufsize "${MJPEG_BUFSIZE}" \
     -x264-params "${MJPEG_X264_PARAMS}" \
     -g "${GOP}" -keyint_min "${GOP}" -sc_threshold 0 \
-    -fps_mode passthrough -vsync passthrough \
+    -fps_mode cfr -r "${MJPEG_FPS}" \
     -flush_packets 1 -max_delay 0 -muxdelay 0.0 -muxpreload 0.0 \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }

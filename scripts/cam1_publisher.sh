@@ -22,11 +22,12 @@ run_mjpeg() {
     -f v4l2 -input_format mjpeg -framerate "${FPS}" -video_size "${RES}" \
     -i "${DEVICE}" \
     -an \
+    -vf "scale=in_range=pc:out_range=tv,format=yuv420p,settb=AVTB,setpts=N/(${FPS}*TB)" \
     -c:v libx264 -preset "${PRESET}" -crf "${CRF}" -tune zerolatency \
     -bf 0 -pix_fmt yuv420p -b:v "${BITRATE}" -maxrate "${BITRATE}" -bufsize "${BUFSIZE}" \
     -x264-params "${X264_PARAMS}" \
     -g "${GOP}" -keyint_min "${GOP}" -sc_threshold 0 \
-    -fps_mode passthrough -vsync passthrough \
+    -fps_mode cfr -r "${FPS}" \
     -flush_packets 1 -max_delay 0 -muxdelay 0.0 -muxpreload 0.0 \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
@@ -39,11 +40,12 @@ run_yuyv() {
     -f v4l2 -input_format yuyv422 -framerate "${FPS}" -video_size "${RES}" \
     -i "${DEVICE}" \
     -an \
+    -vf "format=yuv420p,settb=AVTB,setpts=N/(${FPS}*TB)" \
     -c:v libx264 -preset "${PRESET}" -crf "${CRF}" -tune zerolatency \
     -bf 0 -pix_fmt yuv420p -b:v "${BITRATE}" -maxrate "${BITRATE}" -bufsize "${BUFSIZE}" \
     -x264-params "${X264_PARAMS}" \
     -g "${GOP}" -keyint_min "${GOP}" -sc_threshold 0 \
-    -fps_mode passthrough -vsync passthrough \
+    -fps_mode cfr -r "${FPS}" \
     -flush_packets 1 -max_delay 0 -muxdelay 0.0 -muxpreload 0.0 \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
