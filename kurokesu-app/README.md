@@ -14,6 +14,12 @@ What it does:
 - uses the first `8` steps from `zoom25_focusmap.json`
 - keeps `limitXY` safety metadata and rejects flagged selected points by default
 
+Video defaults are tuned for a local-box setup:
+
+- `CAM1_MODE=auto` prefers `yuyv422` first, then falls back to `mjpeg`
+- higher default bitrate / VBV window for fewer macroblocks
+- `x264` preset/profile aimed at quality rather than minimum CPU
+
 ## Why 8 steps
 
 This project intentionally follows the `camzoom.py` model:
@@ -60,6 +66,12 @@ CAM1_DEVICE=/dev/v4l/by-id/usb-Kurokesu_C3_4K_00001-video-index0
 PTZ_SERIAL=/dev/ttyACM0
 PTZ_SERIAL_FALLBACK=/dev/serial/by-id/
 WEBRTC_ADDITIONAL_HOSTS=10.10.45.39
+```
+
+If `auto` does not work well with your camera/USB path, force:
+
+```dotenv
+CAM1_MODE=mjpeg
 ```
 
 ## Runtime behavior
