@@ -40,6 +40,7 @@ type homeConfig struct {
 }
 
 type PTZ struct {
+	opMu          sync.Mutex
 	mu            sync.Mutex
 	port          *serial.Port
 	serialPath    string
@@ -51,6 +52,7 @@ type PTZ struct {
 	home          homeConfig
 	currentIndex  int
 	homed         bool
+	softWCO       *[4]float64
 }
 
 func newPTZ(cfg Config) (*PTZ, error) {
@@ -199,6 +201,9 @@ func (p *PTZ) mapStateLocked() map[string]any {
 }
 
 func (p *PTZ) statusResponse() map[string]any {
+	p.opMu.Lock()
+	defer p.opMu.Unlock()
+
 	status, err := p.queryStatus()
 	resp := map[string]any{
 		"available": true,
@@ -217,7 +222,7 @@ func (p *PTZ) statusResponse() map[string]any {
 		resp["mposX"] = x
 		resp["mposY"] = y
 	}
-	if x, y, _, _, ok := parseWPos(st); ok {
+	if x, y, _, _, ok := p.parseWPos(st); ok {
 		resp["wposX"] = x
 		resp["wposY"] = y
 	}
@@ -235,6 +240,9 @@ func (p *PTZ) statusResponse() map[string]any {
 }
 
 func (p *PTZ) gotoIndex(idx int) (map[string]any, error) {
+	p.opMu.Lock()
+	defer p.opMu.Unlock()
+
 	p.mu.Lock()
 	m := p.zoomMap
 	feed := p.mapFeed
@@ -323,6 +331,9 @@ func (p *PTZ) gotoIndex(idx int) (map[string]any, error) {
 }
 
 func (p *PTZ) focus(set *float64, delta *int) (map[string]any, error) {
+	p.opMu.Lock()
+	defer p.opMu.Unlock()
+
 	p.mu.Lock()
 	m := p.zoomMap
 	fineStep := p.focusFineStep
@@ -380,6 +391,9 @@ func (p *PTZ) focus(set *float64, delta *int) (map[string]any, error) {
 }
 
 func (p *PTZ) runStartFlow() (map[string]any, error) {
+	p.opMu.Lock()
+	defer p.opMu.Unlock()
+
 	p.mu.Lock()
 	flow := p.home
 	p.mu.Unlock()
@@ -634,6 +648,20 @@ func parseWPos(line string) (float64, float64, float64, float64, bool) {
 	return mx - wx, my - wy, mz - wz, ma - wa, true
 }
 
+func parseWPosWithSoftWCO(line string, soft *[4]float64) (float64, float64, float64, float64, bool) {
+	if x, y, z, a, ok := parseWPos(line); ok {
+		return x, y, z, a, true
+	}
+	if soft == nil {
+		return 0, 0, 0, 0, false
+	}
+	mx, my, mz, ma, ok := parseMPos(line)
+	if !ok {
+		return 0, 0, 0, 0, false
+	}
+	return mx - soft[0], my - soft[1], mz - soft[2], ma - soft[3], true
+}
+
 func parseLimitAxes(line string) map[string]bool {
 	out := map[string]bool{}
 	m := pnRe.FindStringSubmatch(line)
@@ -785,6 +813,7 @@ func (p *PTZ) primeSerialLocked() {
 
 func (p *PTZ) queryStatus() ([]string, error) {
 	status, err := p.queryStatusOnce()
+	p.rememberStatus(statusLine(status))
 	if err == nil || !isRetryableSerialErr(err) {
 		return status, err
 	}
@@ -792,7 +821,9 @@ func (p *PTZ) queryStatus() ([]string, error) {
 	if reopenErr := p.reopenSerial(); reopenErr != nil {
 		return status, fmt.Errorf("%w; reopen failed: %v", err, reopenErr)
 	}
-	return p.queryStatusOnce()
+	status, err = p.queryStatusOnce()
+	p.rememberStatus(statusLine(status))
+	return status, err
 }
 
 func (p *PTZ) queryStatusOnce() ([]string, error) {
@@ -1006,4 +1037,22 @@ func firstExistingSerialByID() string {
 		}
 	}
 	return ""
+}
+
+func (p *PTZ) rememberStatus(line string) {
+	if strings.TrimSpace(line) == "" {
+		return
+	}
+	if x, y, z, a, ok := parse4(line, wcoRe); ok {
+		p.mu.Lock()
+		p.softWCO = &[4]float64{x, y, z, a}
+		p.mu.Unlock()
+	}
+}
+
+func (p *PTZ) parseWPos(line string) (float64, float64, float64, float64, bool) {
+	p.mu.Lock()
+	soft := p.softWCO
+	p.mu.Unlock()
+	return parseWPosWithSoftWCO(line, soft)
 }
