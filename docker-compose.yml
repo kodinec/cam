@@ -14,7 +14,8 @@ services:
     devices:
       - /dev/video0:/dev/video0
       - /dev/video1:/dev/video1
-      - /dev/v4l:/dev/v4l
+    volumes:
+      - /dev/v4l/by-id:/dev/v4l/by-id:ro
     command:
       - -hide_banner
       - -loglevel
@@ -54,7 +55,8 @@ services:
     devices:
       - /dev/video2:/dev/video2
       - /dev/video3:/dev/video3
-      - /dev/v4l:/dev/v4l
+    volumes:
+      - /dev/v4l/by-id:/dev/v4l/by-id:ro
     command:
       - -hide_banner
       - -loglevel
@@ -105,7 +107,8 @@ services:
       - ${PTZ_SERIAL:-/dev/ttyACM0}:${PTZ_SERIAL:-/dev/ttyACM0}
       - /dev/video2:/dev/video2
       - /dev/video3:/dev/video3
-      - /dev/v4l:/dev/v4l
+    volumes:
+      - /dev/v4l/by-id:/dev/v4l/by-id:ro
     environment:
       LISTEN: ":8787"
       PTZ_USER: ${PTZ_USER:-admin}
