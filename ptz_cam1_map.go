@@ -324,12 +324,20 @@ func (p *PTZ) gotoCam1MapIndex(idx int) (map[string]any, error) {
 	p.mu.Lock()
 	m := p.cam1Map
 	feed := p.cam1MapFeed
+	homeCfg := p.cam1HomeCfg
 	p.mu.Unlock()
 	if m == nil {
 		return nil, errors.New("cam1 map is not configured")
 	}
 	if idx < 0 || idx > m.MaxIndex() {
 		return nil, fmt.Errorf("index must be in range 0..%d", m.MaxIndex())
+	}
+
+	// Safety: release active X/Y limits before map motion, otherwise focus Y can stick.
+	if homeCfg.AutoRelease {
+		if err := p.autoReleaseCam1Limits(homeCfg.ReleaseStepX, homeCfg.ReleaseStepY, homeCfg.ReleaseMaxStep, homeCfg.ReleaseFeed); err != nil {
+			return nil, fmt.Errorf("auto-release before map move failed: %w", err)
+		}
 	}
 
 	targetX := m.ZoomX[idx]

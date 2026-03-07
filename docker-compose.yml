@@ -98,11 +98,11 @@ services:
       - -f
       - v4l2
       - -input_format
-      - h264
+      - mjpeg
       - -framerate
-      - "25"
+      - "15"
       - -video_size
-      - 1920x1080
+      - 1024x768
       - -analyzeduration
       - 5M
       - -probesize
