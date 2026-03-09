@@ -41,13 +41,13 @@ This moves H.264 encoding off CPU. Intel hardware is not used automatically just
 `cam1-publisher` now builds its own image with `ffmpeg + libva + Intel VAAPI drivers`, which is required for the container to use `/dev/dri`.
 If `iHD` does not work on an older Intel GPU, try `CAM1_VAAPI_DRIVER=i965`.
 
-Camera 2 currently uses the only confirmed stable ingest path from hardware testing:
+Camera 2 currently uses the only confirmed stable path from hardware testing:
 
 - input device: `/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0`
 - input format: `MJPEG`
 - input size: `1024x768`
 - input rate: `15 fps`
-- output codec: `H.264` via `h264_vaapi` when available, otherwise `libx264`
+- output codec: `H.264` via `libx264`
 
 The advertised H.264 modes on this camera were not treated as production-ready here, because the tested stable flow was MJPEG ingest followed by H.264 publish.
 
@@ -119,15 +119,9 @@ Camera 2 defaults are intentionally conservative:
 ```dotenv
 CAM2_RES=1024x768
 CAM2_FPS=15
-CAM2_ENCODER=h264_vaapi
-CAM2_VAAPI_RC_MODE=bitrate
-CAM2_BITRATE=4M
-CAM2_BUFSIZE=8M
 CAM2_CRF=23
 CAM2_GOP=15
 ```
-
-Just like Camera 1, Camera 2 will automatically retry Intel VAAPI in `quality` mode when the driver rejects `CBR`, and only then fall back to `libx264`.
 
 If you want to force Intel VAAPI by default, keep:
 
