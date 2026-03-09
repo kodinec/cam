@@ -110,22 +110,6 @@ func uiHTML(cfg Config) string {
       display: block;
       background: #000;
     }
-    .stream-empty {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      color: rgba(255,255,255,0.78);
-      font-size: 14px;
-      letter-spacing: 0.2px;
-      text-align: center;
-      background:
-        radial-gradient(circle at center, rgba(31, 143, 106, 0.08), transparent 52%%),
-        rgba(0,0,0,0.32);
-      pointer-events: none;
-    }
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -233,8 +217,6 @@ func uiHTML(cfg Config) string {
       </div>
       <div class="panel-tools">
         <span id="cameraBadge" class="badge">checking</span>
-        <button id="startStreamBtn" class="accent" onclick="startStream()">Start</button>
-        <button id="stopStreamBtn" onclick="stopStream()">Stop</button>
         <button onclick="reloadStream()">Reload</button>
         <button onclick="openStream()">Open</button>
         <button class="blue" onclick="fullscreenStream()">Fullscreen</button>
@@ -243,7 +225,6 @@ func uiHTML(cfg Config) string {
 
     <div class="stream-wrap">
       <iframe id="rtcFrame" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
-      <div id="streamEmpty" class="stream-empty">Stream stopped. Press Start when you need live video.</div>
     </div>
 
     <div class="controls">
@@ -278,7 +259,6 @@ func uiHTML(cfg Config) string {
 
 <script>
 let streamFrameReady = false;
-let streamActive = false;
 
 function rtcURL() {
   return '/cam1/';
@@ -302,15 +282,6 @@ function setCameraBadge(mode) {
   badge.classList.add('badge-checking');
 }
 
-function syncStreamButtons() {
-  const startBtn = document.getElementById('startStreamBtn');
-  const stopBtn = document.getElementById('stopStreamBtn');
-  const empty = document.getElementById('streamEmpty');
-  if (startBtn) startBtn.disabled = streamActive;
-  if (stopBtn) stopBtn.disabled = !streamActive;
-  if (empty) empty.style.display = streamActive ? 'none' : 'flex';
-}
-
 function frameStatusLooksOffline() {
   const frame = document.getElementById('rtcFrame');
   if (!frame || !streamFrameReady) return null;
@@ -327,10 +298,6 @@ function frameStatusLooksOffline() {
 }
 
 async function probeCameraStatus() {
-  if (!streamActive) {
-    setCameraBadge(false);
-    return false;
-  }
   try {
     const r = await fetch(rtcURL(), { method: 'GET', cache: 'no-store' });
     if (!r.ok) {
@@ -356,6 +323,7 @@ async function probeCameraStatus() {
 }
 
 function bindStream() {
+  const url = rtcURL();
   const frame = document.getElementById('rtcFrame');
   if (frame) {
     frame.addEventListener('load', () => {
@@ -367,28 +335,9 @@ function bindStream() {
       setCameraBadge(false);
     });
   }
-  setCameraBadge(false);
-  syncStreamButtons();
-}
-
-function startStream() {
-  const frame = document.getElementById('rtcFrame');
-  if (!frame) return;
-  streamActive = true;
-  streamFrameReady = false;
-  setCameraBadge(null);
-  syncStreamButtons();
-  frame.src = rtcURL() + '?_ts=' + Date.now();
-}
-
-function stopStream() {
-  const frame = document.getElementById('rtcFrame');
-  if (!frame) return;
-  streamActive = false;
-  streamFrameReady = false;
-  frame.src = 'about:blank';
-  setCameraBadge(false);
-  syncStreamButtons();
+  if (frame && frame.src !== window.location.origin + url) {
+    frame.src = url;
+  }
 }
 
 function openStream() {
@@ -396,22 +345,19 @@ function openStream() {
 }
 
 function reloadStream() {
-  if (!streamActive) {
-    startStream();
-    return;
-  }
-  stopStream();
+  const frame = document.getElementById('rtcFrame');
+  if (!frame) return;
+  streamFrameReady = false;
+  setCameraBadge(null);
+  frame.src = 'about:blank';
   setTimeout(() => {
-    startStream();
+    frame.src = rtcURL() + '?_ts=' + Date.now();
   }, 120);
 }
 
 async function fullscreenStream() {
   const frame = document.getElementById('rtcFrame');
   if (!frame) return;
-  if (!streamActive) {
-    startStream();
-  }
   try {
     if (frame.requestFullscreen) {
       await frame.requestFullscreen();
@@ -516,6 +462,7 @@ function camFocusSet() {
 
 bindStream();
 camStatus();
+probeCameraStatus();
 setInterval(() => { camStatus(); }, 15000);
 setInterval(() => { probeCameraStatus(); }, 5000);
 </script>
