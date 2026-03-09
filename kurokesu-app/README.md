@@ -124,10 +124,9 @@ CAM2_GOP=15
 CAM2_USB_HARD_RESET=true
 CAM2_USB_RESET_AFTER_MISSING=20
 CAM2_USB_RESET_OFF_SECONDS=20
-CAM2_USB_RESET_AFTER_SHORT_FAILURES=3
 ```
 
-If H50 disappears from `/dev/v4l/by-id/...`, `cam2-publisher` can hard reset the USB port with `uhubctl` after `CAM2_USB_RESET_AFTER_MISSING` seconds. It also triggers the same reset after `CAM2_USB_RESET_AFTER_SHORT_FAILURES` consecutive short ffmpeg crashes, which covers the case where the device node briefly reappears but dies immediately on `VIDIOC_DQBUF`. By default it tries to auto-detect the target hub location/port from the active video device and caches it for later resets.
+If H50 disappears from `/dev/v4l/by-id/...`, `cam2-publisher` can hard reset the USB port with `uhubctl` after `CAM2_USB_RESET_AFTER_MISSING` seconds. By default it tries to auto-detect the target hub location/port from the active video device and caches it for later resets.
 
 If you want to force Intel VAAPI by default, keep:
 
