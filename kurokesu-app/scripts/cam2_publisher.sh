@@ -16,6 +16,8 @@ RESET_COOLDOWN="${CAM2_USB_RESET_COOLDOWN:-60}"
 RESET_WAIT_AFTER_ON="${CAM2_USB_RESET_WAIT_AFTER_ON:-5}"
 RESET_LOCATION="${CAM2_USB_RESET_LOCATION:-}"
 RESET_PORT="${CAM2_USB_RESET_PORT:-}"
+RESET_AFTER_SHORT_FAILURES="${CAM2_USB_RESET_AFTER_SHORT_FAILURES:-3}"
+SHORT_FAILURE_SECONDS="${CAM2_USB_SHORT_FAILURE_SECONDS:-5}"
 
 CACHED_RESET_LOCATION=""
 CACHED_RESET_PORT=""
@@ -23,6 +25,7 @@ LAST_RESET_TS=0
 MISSING_SINCE=""
 LAST_MISSING_LOG=-1
 LAST_TARGET_LOG=""
+SHORT_FAILURES=0
 
 is_true() {
   case "$1" in
@@ -193,8 +196,34 @@ while true; do
 
   cache_reset_target "${ACTIVE_DEVICE}" || true
 
+  stream_started="$(date +%s)"
   sleep 0.4
   run_stream "${ACTIVE_DEVICE}" || true
+  stream_ended="$(date +%s)"
+  stream_runtime=$((stream_ended - stream_started))
+
+  if [ "${stream_runtime}" -lt "${SHORT_FAILURE_SECONDS}" ]; then
+    SHORT_FAILURES=$((SHORT_FAILURES + 1))
+    echo "cam2 short stream failure runtime=${stream_runtime}s count=${SHORT_FAILURES}"
+  else
+    SHORT_FAILURES=0
+  fi
+
+  if is_true "${HARD_RESET}" && [ "${SHORT_FAILURES}" -ge "${RESET_AFTER_SHORT_FAILURES}" ]; then
+    now="$(date +%s)"
+    since_reset=$((now - LAST_RESET_TS))
+    if [ "${since_reset}" -ge "${RESET_COOLDOWN}" ]; then
+      if hard_reset_usb; then
+        LAST_RESET_TS="$(date +%s)"
+        SHORT_FAILURES=0
+        MISSING_SINCE=""
+        LAST_MISSING_LOG=-1
+        continue
+      fi
+      LAST_RESET_TS="${now}"
+    fi
+  fi
+
   echo "cam2 ffmpeg restarted in 1s"
   sleep 1
 done
