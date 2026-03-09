@@ -340,6 +340,16 @@ function bindStream() {
   }
 }
 
+function stopEmbeddedStream() {
+  const frame = document.getElementById('rtcFrame');
+  if (!frame) return;
+  streamFrameReady = false;
+  setCameraBadge(false);
+  if (frame.src !== 'about:blank') {
+    frame.src = 'about:blank';
+  }
+}
+
 function openStream() {
   window.open(rtcURL(), '_blank', 'noopener');
 }
@@ -463,6 +473,8 @@ function camFocusSet() {
 bindStream();
 camStatus();
 probeCameraStatus();
+window.addEventListener('pagehide', stopEmbeddedStream);
+window.addEventListener('beforeunload', stopEmbeddedStream);
 setInterval(() => { camStatus(); }, 15000);
 setInterval(() => { probeCameraStatus(); }, 5000);
 </script>
