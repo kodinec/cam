@@ -76,6 +76,7 @@ cpu_encoder_args() {
 
 vaapi_encoder_args() {
   input_mode="$1"
+  rc_mode="$2"
   FILTER="$(vaapi_video_filter "${input_mode}")"
   args="
     -an
@@ -87,7 +88,7 @@ vaapi_encoder_args() {
     -bf 0
     -g ${GOP}
   "
-  case "${VAAPI_RC_MODE}" in
+  case "${rc_mode}" in
     quality)
       args="${args} -rc_mode CQP -qp ${VAAPI_QP}"
       ;;
@@ -101,7 +102,7 @@ vaapi_encoder_args() {
       fi
       ;;
     *)
-      echo "cam1 invalid CAM1_VAAPI_RC_MODE=${VAAPI_RC_MODE}; expected quality or bitrate" >&2
+      echo "cam1 invalid CAM1_VAAPI_RC_MODE=${rc_mode}; expected quality or bitrate" >&2
       return 1
       ;;
   esac
@@ -138,7 +139,8 @@ run_yuyv_cpu() {
 
 run_mjpeg_vaapi() {
   dev="$1"
-  ENCODER_ARGS="$(vaapi_encoder_args mjpeg)"
+  rc_mode="$2"
+  ENCODER_ARGS="$(vaapi_encoder_args mjpeg "${rc_mode}")"
   ffmpeg -hide_banner -loglevel warning \
     -fflags nobuffer -flags low_delay \
     -rtbufsize "${RTBUF_SIZE}" \
@@ -151,7 +153,8 @@ run_mjpeg_vaapi() {
 
 run_yuyv_vaapi() {
   dev="$1"
-  ENCODER_ARGS="$(vaapi_encoder_args yuyv)"
+  rc_mode="$2"
+  ENCODER_ARGS="$(vaapi_encoder_args yuyv "${rc_mode}")"
   ffmpeg -hide_banner -loglevel warning \
     -fflags nobuffer -flags low_delay \
     -rtbufsize "${RTBUF_SIZE}" \
@@ -166,7 +169,13 @@ run_mjpeg() {
   dev="$1"
   case "${ENCODER}" in
     h264_vaapi)
-      if ! run_mjpeg_vaapi "${dev}"; then
+      if ! run_mjpeg_vaapi "${dev}" "${VAAPI_RC_MODE}"; then
+        if [ "${VAAPI_FALLBACK}" = "true" ] && [ "${VAAPI_RC_MODE}" = "bitrate" ]; then
+          echo "cam1 vaapi bitrate mode unsupported, retry with quality qp=${VAAPI_QP}"
+          if run_mjpeg_vaapi "${dev}" quality; then
+            return 0
+          fi
+        fi
         if [ "${VAAPI_FALLBACK}" = "true" ]; then
           echo "cam1 vaapi init failed, fallback to libx264"
           run_mjpeg_cpu "${dev}"
@@ -185,7 +194,13 @@ run_yuyv() {
   dev="$1"
   case "${ENCODER}" in
     h264_vaapi)
-      if ! run_yuyv_vaapi "${dev}"; then
+      if ! run_yuyv_vaapi "${dev}" "${VAAPI_RC_MODE}"; then
+        if [ "${VAAPI_FALLBACK}" = "true" ] && [ "${VAAPI_RC_MODE}" = "bitrate" ]; then
+          echo "cam1 vaapi bitrate mode unsupported, retry with quality qp=${VAAPI_QP}"
+          if run_yuyv_vaapi "${dev}" quality; then
+            return 0
+          fi
+        fi
         if [ "${VAAPI_FALLBACK}" = "true" ]; then
           echo "cam1 vaapi init failed, fallback to libx264"
           run_yuyv_cpu "${dev}"
