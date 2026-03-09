@@ -6,9 +6,14 @@ Clean single-camera runtime for:
 - `L085 / L085D lens`
 - serial PTZ controller
 
+Extended in this repo with a second live-view camera:
+
+- `NVECTECH PATRIOT 2 H50`
+
 What it does:
 
 - publishes Camera 1 to MediaMTX (`FFmpeg -> RTSP -> WebRTC`)
+- publishes Camera 2 to MediaMTX (`FFmpeg -> RTSP -> WebRTC`)
 - serves a root-style UI focused on one camera
 - runs map-based zoom from `camzoom.py` logic
 - uses the first `8` steps from `focusmap.json`
@@ -36,6 +41,16 @@ This moves H.264 encoding off CPU. Intel hardware is not used automatically just
 `cam1-publisher` now builds its own image with `ffmpeg + libva + Intel VAAPI drivers`, which is required for the container to use `/dev/dri`.
 If `iHD` does not work on an older Intel GPU, try `CAM1_VAAPI_DRIVER=i965`.
 
+Camera 2 currently uses the only confirmed stable path from hardware testing:
+
+- input device: `/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0`
+- input format: `MJPEG`
+- input size: `1024x768`
+- input rate: `15 fps`
+- output codec: `H.264` via `libx264`
+
+The advertised H.264 modes on this camera were not treated as production-ready here, because the tested stable flow was MJPEG ingest followed by H.264 publish.
+
 ## Why 8 steps
 
 This project intentionally follows the `camzoom.py` model:
@@ -60,6 +75,8 @@ docker compose up -d --build
 UI:
 
 - `http://<host>:8787`
+- Camera 1 (`Camera RGB`) keeps PTZ controls
+- Camera 2 is a read-only live view panel
 
 ## Main env vars
 
@@ -68,6 +85,7 @@ UI:
 - `PTZ_SERIAL_FALLBACK`
 - `PTZ_BAUD`
 - `CAM1_DEVICE`
+- `CAM2_DEVICE`
 - `CAM_MAP_STEPS` default `8`
 - `CAM_STRICT_MAP_LIMITS` default `true`
 - `CAM_AUTO_HOME_ON_START` default `true`
@@ -82,6 +100,7 @@ Most installations only need to verify these lines in `.env`:
 
 ```dotenv
 CAM1_DEVICE=/dev/v4l/by-id/usb-Kurokesu_C3_4K_00001-video-index0
+CAM2_DEVICE=/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0
 PTZ_SERIAL=/dev/ttyACM0
 PTZ_SERIAL_FALLBACK=/dev/serial/by-id/
 WEBRTC_ADDITIONAL_HOSTS=10.10.45.39
@@ -94,6 +113,15 @@ The web UI uses HTTP Basic Auth.
 If `APP_USER` and `APP_PASS` are both empty, auth is disabled.
 If one is set and the other is empty, the service now fails fast on startup instead of silently running with a broken auth config.
 The service also runs one automatic home flow on process startup by default, so zoom/focus controls are ready on first page load.
+
+Camera 2 defaults are intentionally conservative:
+
+```dotenv
+CAM2_RES=1024x768
+CAM2_FPS=15
+CAM2_CRF=23
+CAM2_GOP=15
+```
 
 If you want to force Intel VAAPI by default, keep:
 

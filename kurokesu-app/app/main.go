@@ -42,6 +42,7 @@ func main() {
 
 	private := http.NewServeMux()
 	cam1Path := streamProxyPath("cam1")
+	cam2Path := streamProxyPath("cam2")
 	private.HandleFunc("/", serveUI(cfg))
 	// MediaMTX's built-in WebRTC player is more reliable when served at the
 	// final stream path, instead of behind an extra prefix like /rtc/cam1/.
@@ -49,6 +50,10 @@ func main() {
 		http.Redirect(w, r, cam1Path, http.StatusMovedPermanently)
 	})
 	private.HandleFunc(cam1Path, makePrefixReverseProxy(streamProxyBaseURL(cfg.RTCBase, "cam1"), cam1Path, "cam1-rtc"))
+	private.HandleFunc(strings.TrimSuffix(cam2Path, "/"), func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, cam2Path, http.StatusMovedPermanently)
+	})
+	private.HandleFunc(cam2Path, makePrefixReverseProxy(streamProxyBaseURL(cfg.RTCBase, "cam2"), cam2Path, "cam2-rtc"))
 	private.HandleFunc("/rtc/", makePrefixReverseProxy(cfg.RTCBase, "/rtc/", "cam-rtc"))
 	if ptz != nil {
 		private.HandleFunc("/api/status", handleStatus(ptz))

@@ -82,6 +82,11 @@ func uiHTML(cfg Config) string {
       box-shadow: var(--shadow);
       overflow: hidden;
     }
+    .camera-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+      gap: 14px;
+    }
     .panel-head {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -196,6 +201,7 @@ func uiHTML(cfg Config) string {
       line-height: 1.45;
     }
     @media (max-width: 960px) {
+      .camera-grid { grid-template-columns: 1fr; }
       .head, .panel-head { grid-template-columns: 1fr; }
       .head { align-items: flex-start; flex-direction: column; }
       .panel-tools { justify-content: flex-start; }
@@ -210,21 +216,22 @@ func uiHTML(cfg Config) string {
     </div>
   </header>
 
+  <div class="camera-grid">
   <section class="panel">
     <div class="panel-head">
       <div>
         <h2>Camera RGB</h2>
       </div>
       <div class="panel-tools">
-        <span id="cameraBadge" class="badge">checking</span>
-        <button onclick="reloadStream()">Reload</button>
-        <button onclick="openStream()">Open</button>
-        <button class="blue" onclick="fullscreenStream()">Fullscreen</button>
+        <span id="cam1Badge" class="badge">checking</span>
+        <button onclick="reloadStream('cam1')">Reload</button>
+        <button onclick="openStream('cam1')">Open</button>
+        <button class="blue" onclick="fullscreenStream('cam1')">Fullscreen</button>
       </div>
     </div>
 
     <div class="stream-wrap">
-      <iframe id="rtcFrame" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+      <iframe id="cam1Frame" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
     </div>
 
     <div class="controls">
@@ -251,6 +258,29 @@ func uiHTML(cfg Config) string {
     </div>
   </section>
 
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>%s</h2>
+      </div>
+      <div class="panel-tools">
+        <span id="cam2Badge" class="badge">checking</span>
+        <button onclick="reloadStream('cam2')">Reload</button>
+        <button onclick="openStream('cam2')">Open</button>
+        <button class="blue" onclick="fullscreenStream('cam2')">Fullscreen</button>
+      </div>
+    </div>
+
+    <div class="stream-wrap">
+      <iframe id="cam2Frame" class="stream-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+    </div>
+
+    <div class="controls">
+      <span class="small">Read-only live view for NVECTECH PATRIOT 2 H50.</span>
+    </div>
+  </section>
+  </div>
+
   <section class="log">
     <div class="log-head">API log</div>
     <pre id="log">{}</pre>
@@ -258,14 +288,19 @@ func uiHTML(cfg Config) string {
 </div>
 
 <script>
-let streamFrameReady = false;
+const streamState = {
+  cam1: { ready: false, frameId: 'cam1Frame', badgeId: 'cam1Badge', path: '/cam1/' },
+  cam2: { ready: false, frameId: 'cam2Frame', badgeId: 'cam2Badge', path: '/cam2/' }
+};
 
-function rtcURL() {
-  return '/cam1/';
+function rtcURL(key) {
+  const state = streamState[key];
+  return state ? state.path : '/';
 }
 
-function setCameraBadge(mode) {
-  const badge = document.getElementById('cameraBadge');
+function setCameraBadge(key, mode) {
+  const state = streamState[key];
+  const badge = state ? document.getElementById(state.badgeId) : null;
   if (!badge) return;
   badge.classList.remove('badge-online', 'badge-offline', 'badge-checking');
   if (mode === true) {
@@ -282,9 +317,10 @@ function setCameraBadge(mode) {
   badge.classList.add('badge-checking');
 }
 
-function frameStatusLooksOffline() {
-  const frame = document.getElementById('rtcFrame');
-  if (!frame || !streamFrameReady) return null;
+function frameStatusLooksOffline(key) {
+  const state = streamState[key];
+  const frame = state ? document.getElementById(state.frameId) : null;
+  if (!frame || !state || !state.ready) return null;
   try {
     const doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
     const text = doc && doc.body ? String(doc.body.innerText || '').toLowerCase() : '';
@@ -297,42 +333,43 @@ function frameStatusLooksOffline() {
   }
 }
 
-async function probeCameraStatus() {
+async function probeCameraStatus(key) {
   try {
-    const r = await fetch(rtcURL(), { method: 'GET', cache: 'no-store' });
+    const r = await fetch(rtcURL(key), { method: 'GET', cache: 'no-store' });
     if (!r.ok) {
-      setCameraBadge(false);
+      setCameraBadge(key, false);
       return false;
     }
   } catch (_) {
-    setCameraBadge(false);
+    setCameraBadge(key, false);
     return false;
   }
 
-  const offline = frameStatusLooksOffline();
+  const offline = frameStatusLooksOffline(key);
   if (offline === true) {
-    setCameraBadge(false);
+    setCameraBadge(key, false);
     return false;
   }
   if (offline === false) {
-    setCameraBadge(true);
+    setCameraBadge(key, true);
     return true;
   }
-  setCameraBadge(null);
+  setCameraBadge(key, null);
   return null;
 }
 
-function bindStream() {
-  const url = rtcURL();
-  const frame = document.getElementById('rtcFrame');
+function bindStream(key) {
+  const state = streamState[key];
+  const url = rtcURL(key);
+  const frame = state ? document.getElementById(state.frameId) : null;
   if (frame) {
     frame.addEventListener('load', () => {
-      streamFrameReady = true;
-      probeCameraStatus();
+      state.ready = true;
+      probeCameraStatus(key);
     });
     frame.addEventListener('error', () => {
-      streamFrameReady = false;
-      setCameraBadge(false);
+      state.ready = false;
+      setCameraBadge(key, false);
     });
   }
   if (frame && frame.src !== window.location.origin + url) {
@@ -340,33 +377,36 @@ function bindStream() {
   }
 }
 
-function stopEmbeddedStream() {
-  const frame = document.getElementById('rtcFrame');
+function stopEmbeddedStream(key) {
+  const state = streamState[key];
+  const frame = state ? document.getElementById(state.frameId) : null;
   if (!frame) return;
-  streamFrameReady = false;
-  setCameraBadge(false);
+  state.ready = false;
+  setCameraBadge(key, false);
   if (frame.src !== 'about:blank') {
     frame.src = 'about:blank';
   }
 }
 
-function openStream() {
-  window.open(rtcURL(), '_blank', 'noopener');
+function openStream(key) {
+  window.open(rtcURL(key), '_blank', 'noopener');
 }
 
-function reloadStream() {
-  const frame = document.getElementById('rtcFrame');
+function reloadStream(key) {
+  const state = streamState[key];
+  const frame = state ? document.getElementById(state.frameId) : null;
   if (!frame) return;
-  streamFrameReady = false;
-  setCameraBadge(null);
+  state.ready = false;
+  setCameraBadge(key, null);
   frame.src = 'about:blank';
   setTimeout(() => {
-    frame.src = rtcURL() + '?_ts=' + Date.now();
+    frame.src = rtcURL(key) + '?_ts=' + Date.now();
   }, 120);
 }
 
-async function fullscreenStream() {
-  const frame = document.getElementById('rtcFrame');
+async function fullscreenStream(key) {
+  const state = streamState[key];
+  const frame = state ? document.getElementById(state.frameId) : null;
   if (!frame) return;
   try {
     if (frame.requestFullscreen) {
@@ -374,7 +414,7 @@ async function fullscreenStream() {
       return;
     }
   } catch (_) {}
-  openStream();
+  openStream(key);
 }
 
 async function api(url, method, body) {
@@ -470,15 +510,24 @@ function camFocusSet() {
   return api('/api/focus', 'POST', { set }).then(updateState);
 }
 
-bindStream();
+bindStream('cam1');
+bindStream('cam2');
 camStatus();
-probeCameraStatus();
-window.addEventListener('pagehide', stopEmbeddedStream);
-window.addEventListener('beforeunload', stopEmbeddedStream);
+probeCameraStatus('cam1');
+probeCameraStatus('cam2');
+window.addEventListener('pagehide', () => {
+  stopEmbeddedStream('cam1');
+  stopEmbeddedStream('cam2');
+});
+window.addEventListener('beforeunload', () => {
+  stopEmbeddedStream('cam1');
+  stopEmbeddedStream('cam2');
+});
 setInterval(() => { camStatus(); }, 15000);
-setInterval(() => { probeCameraStatus(); }, 5000);
+setInterval(() => { probeCameraStatus('cam1'); }, 5000);
+setInterval(() => { probeCameraStatus('cam2'); }, 5000);
 </script>
 </body>
-</html>`,
+</html>`, cfg.Cam2Name,
 	)
 }

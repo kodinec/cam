@@ -27,6 +27,22 @@ services:
       - .env
     entrypoint: ["/bin/sh", "/scripts/cam1_publisher.sh"]
 
+  cam2-publisher:
+    build:
+      context: ./cam1-publisher
+      dockerfile: Dockerfile
+    image: kurokesu-app-cam2-publisher
+    restart: unless-stopped
+    privileged: true
+    depends_on:
+      - mediamtx
+    volumes:
+      - /dev:/dev
+      - ./scripts:/scripts:ro
+    env_file:
+      - .env
+    entrypoint: ["/bin/sh", "/scripts/cam2_publisher.sh"]
+
   web:
     build:
       context: ./app
@@ -36,6 +52,7 @@ services:
     depends_on:
       - mediamtx
       - cam1-publisher
+      - cam2-publisher
     volumes:
       - /dev:/dev
       - ./focusmap.json:/app/focusmap.json:ro

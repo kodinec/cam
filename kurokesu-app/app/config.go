@@ -12,6 +12,7 @@ type Config struct {
 	User            string
 	Pass            string
 	CameraName      string
+	Cam2Name        string
 	RTCBase         string
 	MapPath         string
 	MapSteps        int
@@ -47,6 +48,7 @@ func loadConfig() Config {
 	flag.StringVar(&cfg.User, "user", envString("APP_USER", ""), "basic auth user")
 	flag.StringVar(&cfg.Pass, "pass", envString("APP_PASS", ""), "basic auth password")
 	flag.StringVar(&cfg.CameraName, "camera-name", envString("CAMERA_NAME", "Kurokesu C3 4K + L085/L085D"), "camera label")
+	flag.StringVar(&cfg.Cam2Name, "cam2-name", envString("CAM2_NAME", "Camera Thermal"), "camera #2 label")
 	flag.StringVar(&cfg.RTCBase, "rtc-base", envString("RTC_BASE", "http://mediamtx:8889/"), "MediaMTX WebRTC base URL")
 	flag.StringVar(&cfg.MapPath, "map-path", envString("CAM_MAP_PATH", "/app/focusmap.json"), "zoom/focus map JSON path")
 	flag.IntVar(&cfg.MapSteps, "map-steps", envInt("CAM_MAP_STEPS", 8), "number of map steps to use from the source map")
