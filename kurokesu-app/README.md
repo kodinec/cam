@@ -121,12 +121,7 @@ CAM2_RES=1024x768
 CAM2_FPS=15
 CAM2_CRF=23
 CAM2_GOP=15
-CAM2_USB_HARD_RESET=true
-CAM2_USB_RESET_AFTER_MISSING=20
-CAM2_USB_RESET_OFF_SECONDS=20
 ```
-
-If H50 disappears from `/dev/v4l/by-id/...`, `cam2-publisher` can hard reset the USB port with `uhubctl` after `CAM2_USB_RESET_AFTER_MISSING` seconds. By default it tries to auto-detect the target hub location/port from the active video device and caches it for later resets.
 
 If you want to force Intel VAAPI by default, keep:
 

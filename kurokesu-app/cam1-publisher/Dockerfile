@@ -9,7 +9,6 @@ RUN apt-get update \
         intel-media-va-driver \
         i965-va-driver \
         mesa-va-drivers \
-        uhubctl \
         vainfo \
     && rm -rf /var/lib/apt/lists/*
 
