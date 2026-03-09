@@ -4,13 +4,11 @@ set -eu
 DEVICE="${CAM2_DEVICE:-/dev/v4l/by-id/usb-rockchip_UVC_2020-video-index0}"
 FPS="${CAM2_FPS:-15}"
 RES="${CAM2_RES:-1024x768}"
-THREAD_QUEUE="${CAM2_THREAD_QUEUE:-64}"
 PRESET="${CAM2_X264_PRESET:-veryfast}"
 TUNE="${CAM2_X264_TUNE:-zerolatency}"
 CRF="${CAM2_CRF:-23}"
 GOP="${CAM2_GOP:-15}"
 RTSP_URL="${CAM2_RTSP_URL:-rtsp://mediamtx:8554/cam2}"
-X264_PARAMS="${CAM2_X264_PARAMS:-bframes=0:rc-lookahead=0:sync-lookahead=0:scenecut=0}"
 
 resolve_device() {
   if [ -e "${DEVICE}" ]; then
@@ -32,16 +30,13 @@ resolve_device() {
 
 run_stream() {
   dev="$1"
-  ffmpeg -hide_banner -loglevel warning \
+  ffmpeg -hide_banner -loglevel info \
     -fflags +genpts -use_wallclock_as_timestamps 1 \
-    -thread_queue_size "${THREAD_QUEUE}" \
     -f v4l2 -input_format mjpeg -framerate "${FPS}" -video_size "${RES}" \
     -i "${dev}" \
     -vf "scale=in_range=pc:out_range=tv,format=yuv420p,fps=${FPS}" \
     -an \
     -c:v libx264 -preset "${PRESET}" -tune "${TUNE}" -crf "${CRF}" \
-    -bf 0 -pix_fmt yuv420p \
-    -x264-params "${X264_PARAMS}" \
     -g "${GOP}" -keyint_min "${GOP}" -sc_threshold 0 \
     -f rtsp -rtsp_transport tcp "${RTSP_URL}"
 }
